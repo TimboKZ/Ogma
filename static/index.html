@@ -2,24 +2,20 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Hello World!</title>
+    <title>Ogma</title>
     <link rel="icon" type="image/png" href="ogma-icon-128.png"/>
     <link rel="stylesheet" type="text/css" href="index.css"/>
 </head>
 <body>
-    <section class="section">
-        <div class="container">
-            <h1 class="title">
-                Hello World
-            </h1>
-            <p class="subtitle">
-                My first website with <strong>Bulma</strong>!
-            </p>
-        </div>
-    </section>
+    <div id="react-root">
+    </div>
 
     <script>
-        require('../lib/index.js');
+        require('babel-register')({
+            presets: ['es2015', 'react'],
+            plugins: ['transform-class-properties'],
+        });
+        require('../renderer/react-app');
     </script>
 </body>
 </html>
