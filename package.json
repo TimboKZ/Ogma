@@ -1,0 +1,33 @@
+{
+  "name": "ogma",
+  "version": "1.0.0",
+  "description": "Tagging system for large file collections.",
+  "main": "lib/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/v1ndic4te/Ogma.git"
+  },
+  "keywords": [
+    "ogma",
+    "tagging",
+    "filesystem",
+    "file-management"
+  ],
+  "author": "v1ndic4te",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/v1ndic4te/Ogma/issues"
+  },
+  "homepage": "https://github.com/v1ndic4te/Ogma#readme",
+  "devDependencies": {
+    "electron": "^3.0.10",
+    "eslint": "^5.9.0"
+  },
+  "dependencies": {
+    "bulma": "^0.7.2"
+  }
+}
