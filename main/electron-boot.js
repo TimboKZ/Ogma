@@ -4,11 +4,8 @@
  * @licence GPL-3.0
  */
 
-// Register Babel hooks for JSX compilation
-require('babel-register')({
-    presets: ['es2015', 'react'],
-    plugins: ['transform-class-properties'],
-});
+const path = require('path');
 
-// Include the main app
-require('./electron-app.js');
+const appRoot = path.resolve(path.join(__dirname, '..'));
+
+require('electron-compile').init(appRoot, require.resolve('./electron-app.js'));

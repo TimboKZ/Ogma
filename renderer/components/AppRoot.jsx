@@ -7,30 +7,36 @@
 const React = require('react');
 const {Route, HashRouter} = require('react-router-dom');
 
+const {DataContext, DataManager} = require('./util/DataManager');
 const EnvSelector = require('./util/EnvSelector');
 const HomePage = require('./pages/HomePage');
-const SortPicker = require('./util/SortPicker');
-const ViewPicker = require('./util/ViewPicker');
+const EnvRoot = require('./pages/EnvRoot');
 
-
-const Envs = [
-    {id: 'essays', name: 'Essays', background: '#c24968'},
-    {id: 'documents', name: 'Documents', background: '#33c24b'},
-];
-
+const dataManager = new DataManager();
 
 class AppRoot extends React.Component {
 
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            selectorEnvs: [],
+        };
+    }
+
     render() {
         return (
-            <HashRouter>
-                <React.Fragment>
-                    <EnvSelector envs={Envs}/>
-                    <div className="page">
-                        <Route path="/" exact component={HomePage}/>
-                    </div>
-                </React.Fragment>
-            </HashRouter>
+            <DataContext.Provider value={dataManager}>
+                <HashRouter>
+                    <React.Fragment>
+                        <EnvSelector envs={this.state.selectorEnvs}/>
+                        <div className="page">
+                            <Route path="/" exact component={HomePage}/>
+                            <Route path="/envs/:envId" component={EnvRoot}/>
+                        </div>
+                    </React.Fragment>
+                </HashRouter>
+            </DataContext.Provider>
             /*           <div className="container is-fluid">
                            <br/>
                            <div className="columns">

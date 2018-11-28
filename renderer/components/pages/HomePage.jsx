@@ -4,9 +4,12 @@
  * @licence GPL-3.0
  */
 
+const path = require('path');
 const React = require('react');
 const ReactMarkdown = require('react-markdown');
 const promiseIpc = require('electron-promise-ipc');
+
+const Util = require('../../../main/Util');
 
 class HomePage extends React.Component {
 
@@ -35,14 +38,25 @@ class HomePage extends React.Component {
     }
 
     render() {
-        return <div className="tile is-child box">
-            <div className="content">
-                <h1>Welcome to Ogma!</h1>
-                <p>Choose an existing environment from the list on the left, or create one by pressing the
-                    plus button.</p>
-                {this.renderWarnings()}
-            </div>
-        </div>;
+        return (
+            <section className="hero is-bold">
+                <div className="hero-body has-text-centered">
+                    <div className="container">
+                        <figure className="image" style={{maxWidth: '275px', margin: '0 auto'}}>
+                            <img alt="Eye with a spiral inside it." title="Ogma logo"
+                                 src={path.join(Util.getStaticPath(), 'ogma-logo.png')}/>
+                        </figure>
+                        <h1 className="title" style={{margin: '35px 0'}}>
+                            Welcome to Ogma!
+                        </h1>
+                        <h2 className="subtitle">
+                            Choose an existing environment from the list on the left, or create one by pressing the
+                            plus button.
+                        </h2>
+                    </div>
+                </div>
+            </section>
+        );
     }
 
 }

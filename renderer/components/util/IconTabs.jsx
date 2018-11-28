@@ -39,7 +39,7 @@ class IconTabs extends React.Component {
             const type = types[i];
             const className = c({
                 'tooltip': true,
-                'is-tooltip-bottom': true,
+                'is-tooltip-top': true,
                 'is-active': this.state.activeOption === type.slug,
             });
 

@@ -24,6 +24,10 @@ class OgmaCore {
         this.envMap = {};
     }
 
+    getEnvMap() {
+        return this.envMap;
+    }
+
     init() {
         this.initDirectory();
         this.initEnvs();
@@ -55,8 +59,13 @@ class OgmaCore {
 
     initEnvs() {
         const envs = fs.readdirSync(this.envDir);
-        for (const env in envs) {
-            console.log(env);
+        console.log(`Found ${envs.length} environments on startup.`);
+        for (const dbFileName of envs) {
+            if (!dbFileName.startsWith('env-')) continue;
+            const dbPath = path.join(this.envDir, dbFileName);
+            const env = new Environment({dbPath});
+
+            this.envMap[env.getSummary().id] = env;
         }
     }
 
@@ -84,6 +93,8 @@ class OgmaCore {
             envRoot: data.envRoot,
             dbPath,
         });
+
+        return envId;
     }
 
     /**

@@ -11,8 +11,15 @@ console.log(`We are using:
 
 const React = require('react');
 const ReactDOM = require('react-dom');
+const {AppContainer} = require('react-hot-loader');
 
-const AppRoot = require('./components/AppRoot');
+const render = () => {
+    const AppRoot = require('./components/AppRoot');
+    const reactRoot = document.querySelector('#react-root');
+    ReactDOM.render(<AppContainer><AppRoot/></AppContainer>, reactRoot);
+};
 
-const reactRoot = document.querySelector('#react-root');
-ReactDOM.render(<AppRoot/>, reactRoot);
+render();
+if (module.hot) {
+    module.hot.accept(render);
+}

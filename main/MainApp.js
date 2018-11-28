@@ -7,11 +7,11 @@
 const os = require('os');
 const path = require('path');
 const {app, BrowserWindow} = require('electron');
+const {enableLiveReload} = require('electron-compile');
 
+const Util = require('./Util');
 const OgmaCore = require('./OgmaCore');
 const IpcModule = require('./IpcModule');
-
-const StaticPath = path.normalize(path.join(__dirname, '..', 'static'));
 
 class MainApp {
 
@@ -34,7 +34,10 @@ class MainApp {
     }
 
     setupElectronApp() {
-        app.on('ready', this.createWindow.bind(this));
+        app.on('ready', () => {
+            enableLiveReload();
+            this.createWindow();
+        });
         app.on('window-all-closed', () => {
             // On macOS it is common for applications and their menu bar
             // to stay active until the user quits explicitly with Cmd + Q
@@ -51,9 +54,9 @@ class MainApp {
         this.mainWindow = new BrowserWindow({
             width: 1280,
             height: 720,
-            icon: path.join(StaticPath, 'ogma-icon-128.png'),
+            icon: path.join(Util.getStaticPath(), 'ogma-icon-128.png'),
         });
-        this.mainWindow.loadFile(path.join(StaticPath, 'index.html'));
+        this.mainWindow.loadFile(path.join(Util.getStaticPath(), 'index.html'));
 
         // Open the DevTools.
         this.mainWindow.webContents.openDevTools();

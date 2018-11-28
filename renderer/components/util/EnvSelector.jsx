@@ -5,28 +5,28 @@
  */
 
 const React = require('react');
-const PropTypes = require('prop-types');
 const {NavLink} = require('react-router-dom');
 const promiseIpc = require('electron-promise-ipc');
 
+const {DataContext} = require('../util/DataManager');
 const Icon = require('./Icon');
 
 class EnvSelector extends React.Component {
 
-    static propTypes = {
-        envs: PropTypes.array,
-        activeEnv: PropTypes.string,
-    };
-
-    static defaultProps = {
-        envs: [],
-        activeEnv: null,
-    };
+    static contextType = DataContext;
 
     constructor(props) {
         super(props);
+        this.state = {
+            envSummaries: [],
+        };
 
         this.createEnvClick = this.createEnvClick.bind(this);
+    }
+
+    componentDidMount() {
+        this.context.getEnvSummaries()
+            .then(envSummaries => this.setState({envSummaries}));
     }
 
     createEnvClick() {
@@ -34,7 +34,7 @@ class EnvSelector extends React.Component {
     }
 
     renderEnvButtons() {
-        const envs = this.props.envs;
+        const envs = this.state.envSummaries;
         const comps = new Array(envs.length);
         for (let i = 0; i < comps.length; i++) {
             const env = envs[i];
@@ -48,7 +48,7 @@ class EnvSelector extends React.Component {
                         to={`/envs/${env.id}`}
                         className="env-button"
                         activeClassName="env-active"
-                        style={{backgroundColor: env.background}}><span>{symbol}</span></NavLink>
+                        style={{backgroundColor: env.colour}}><span>{symbol}</span></NavLink>
                 </div>
             );
         }
