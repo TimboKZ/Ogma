@@ -27,7 +27,7 @@ class IconTabs extends React.Component {
 
     optionClick(optionSlug) {
         if (this.props.onOptionChange) this.props.onOptionChange(optionSlug);
-        else console.warn('Now option change callback specified for IconTabs!');
+        else console.warn('No option change callback specified for IconTabs!');
 
         this.setState({activeOption: optionSlug});
     }

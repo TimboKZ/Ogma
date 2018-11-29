@@ -8,12 +8,9 @@ const React = require('react');
 const {NavLink} = require('react-router-dom');
 const promiseIpc = require('electron-promise-ipc');
 
-const {DataContext} = require('../util/DataManager');
 const Icon = require('./Icon');
 
 class EnvSelector extends React.Component {
-
-    static contextType = DataContext;
 
     constructor(props) {
         super(props);
@@ -25,7 +22,7 @@ class EnvSelector extends React.Component {
     }
 
     componentDidMount() {
-        this.context.getEnvSummaries()
+        window.dataManager.getEnvSummaries()
             .then(envSummaries => this.setState({envSummaries}));
     }
 
@@ -59,7 +56,7 @@ class EnvSelector extends React.Component {
         return (
             <div className="env-selector">
 
-                <div className="env-button-wrapper tooltip is-tooltip-right" data-tooltip="Ogma home">
+                <div className="env-button-wrapper tooltip is-tooltip-right" data-tooltip="Home">
                     <NavLink
                         to="/"
                         exact

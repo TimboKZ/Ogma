@@ -11,3 +11,12 @@
  * @property {string} root
  * @property {string} colour
  */
+
+/**
+ * @typedef {object} FileData
+ * @property {string} name
+ * @property {string} path
+ * @property {bool} isFile
+ * @property {bool} isDirectory
+ * @property {bool} isSymlink
+ */

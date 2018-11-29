@@ -13,13 +13,19 @@ const React = require('react');
 const ReactDOM = require('react-dom');
 const {AppContainer} = require('react-hot-loader');
 
-const render = () => {
-    const AppRoot = require('./components/AppRoot');
-    const reactRoot = document.querySelector('#react-root');
-    ReactDOM.render(<AppContainer><AppRoot/></AppContainer>, reactRoot);
-};
+const DataManager = require('./components/util/DataManager');
 
-render();
-if (module.hot) {
-    module.hot.accept(render);
-}
+window.dataManager = new DataManager();
+window.dataManager._ensureEnvSummaries()
+    .then(() => {
+        const render = () => {
+            const AppRoot = require('./components/AppRoot');
+            const reactRoot = document.querySelector('#react-root');
+            ReactDOM.render(<AppContainer><AppRoot/></AppContainer>, reactRoot);
+        };
+
+        render();
+        if (module.hot) {
+            module.hot.accept(render);
+        }
+    });

@@ -9,11 +9,11 @@ const PropTypes = require('prop-types');
 
 const IconTabs = require('./IconTabs');
 
-const SortSlugs = ['relevance', 'name', 'duration'];
+const SortSlugs = ['relevance', 'name', 'size'];
 const SortTypes = [
     {slug: SortSlugs[0], name: 'Relevance', icon: 'sort-amount-down'},
     {slug: SortSlugs[1], name: 'Name', icon: 'sort-alpha-down'},
-    {slug: SortSlugs[2], name: 'Duration', icon: 'sort-numeric-down'},
+    {slug: SortSlugs[2], name: 'Size', icon: 'sort-numeric-down'},
 ];
 
 class SortPicker extends React.Component {
@@ -33,7 +33,7 @@ class SortPicker extends React.Component {
 
     render() {
         return <React.Fragment>
-            <p className="level-item"><strong>Sort by</strong></p>
+            <p className="level-item">Sort by</p>
             <div className="level-item">
                 <div className="tabs is-toggle is-small" style={{overflow: 'visible'}}>
                     <IconTabs

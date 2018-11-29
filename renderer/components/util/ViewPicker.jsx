@@ -33,7 +33,7 @@ class ViewPicker extends React.Component {
 
     render() {
         return <React.Fragment>
-            <p className="level-item"><strong>View</strong></p>
+            <p className="level-item">View</p>
             <div className="level-item">
                 <div className="tabs is-toggle is-small" style={{overflow: 'visible'}}>
                     <IconTabs

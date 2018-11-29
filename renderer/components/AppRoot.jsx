@@ -7,12 +7,9 @@
 const React = require('react');
 const {Route, HashRouter} = require('react-router-dom');
 
-const {DataContext, DataManager} = require('./util/DataManager');
 const EnvSelector = require('./util/EnvSelector');
 const HomePage = require('./pages/HomePage');
 const EnvRoot = require('./pages/EnvRoot');
-
-const dataManager = new DataManager();
 
 class AppRoot extends React.Component {
 
@@ -26,7 +23,6 @@ class AppRoot extends React.Component {
 
     render() {
         return (
-            <DataContext.Provider value={dataManager}>
                 <HashRouter>
                     <React.Fragment>
                         <EnvSelector envs={this.state.selectorEnvs}/>
@@ -36,29 +32,6 @@ class AppRoot extends React.Component {
                         </div>
                     </React.Fragment>
                 </HashRouter>
-            </DataContext.Provider>
-            /*           <div className="container is-fluid">
-                           <br/>
-                           <div className="columns">
-                               <div className="column">
-
-                                   <nav className="level">
-                                       <div className="level-left">
-                                           <div className="level-item">
-                                           </div>
-                                       </div>
-
-                                       <div className="level-right">
-                                           <SortPicker/>
-                                           <div className="level-item"> </div>
-                                           <ViewPicker/>
-                                       </div>
-                                   </nav>
-
-
-                               </div>
-                           </div>
-                       </div>*/
         );
     }
 
