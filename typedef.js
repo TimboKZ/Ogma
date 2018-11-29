@@ -14,9 +14,11 @@
 
 /**
  * @typedef {object} FileData
+ * @property {string} base
  * @property {string} name
+ * @property {string} ext
  * @property {string} path
- * @property {bool} isFile
- * @property {bool} isDirectory
- * @property {bool} isSymlink
+ * @property {boolean} isFile
+ * @property {boolean} isDirectory
+ * @property {boolean} isSymlink
  */

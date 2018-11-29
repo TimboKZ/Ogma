@@ -6,6 +6,7 @@
 
 const path = require('path');
 const fs = require('fs-extra');
+const Util = require ('../../../main/Util');
 
 class FileManager {
 
@@ -37,14 +38,7 @@ class FileManager {
         for (let i = 0; i < fileNames.length; i++) {
             const name = fileNames[i];
             const filePath = path.join(data.dir, name);
-            const stats = fs.lstatSync(filePath);
-            files[i] = {
-                name: name,
-                path: filePath,
-                isFile: stats.isFile(),
-                isDir: stats.isDirectory(),
-                isSymlink: stats.isSymbolicLink(),
-            };
+            files[i] = Util.getFileData(filePath);
         }
 
         this.directoryCache[data.dir] = files;

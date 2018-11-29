@@ -9,11 +9,16 @@ const PropTypes = require('prop-types');
 
 const IconTabs = require('./IconTabs');
 
-const ViewSlugs = ['list', 'thumb-small', 'thumb-large'];
+const Views = {
+    List: 'list',
+    ThumbsSmall: 'thumbs-small',
+    ThumbsLarge: 'thumbs-large',
+}
+const ViewSlugs = [Views.List, Views.ThumbsSmall, Views.ThumbsLarge];
 const ViewTypes = [
-    {slug: ViewSlugs[0], name: 'List', icon: 'th-list'},
-    {slug: ViewSlugs[1], name: 'Small thumbnails', icon: 'th'},
-    {slug: ViewSlugs[2], name: 'Large thumbnails', icon: 'th-large'},
+    {slug: Views.List, name: 'List', icon: 'th-list'},
+    {slug: Views.ThumbsSmall, name: 'Small thumbnails', icon: 'th'},
+    {slug: Views.ThumbsLarge, name: 'Large thumbnails', icon: 'th-large'},
 ];
 
 class ViewPicker extends React.Component {
@@ -24,7 +29,7 @@ class ViewPicker extends React.Component {
     };
 
     static defaultProps = {
-        activeOption: ViewSlugs[0],
+        activeOption: Views.List,
     };
 
     constructor(props) {
@@ -48,3 +53,6 @@ class ViewPicker extends React.Component {
 }
 
 module.exports = ViewPicker;
+module.exports.Views = Views;
+module.exports.ViewSlugs = ViewSlugs;
+module.exports.ViewTypes = ViewTypes;

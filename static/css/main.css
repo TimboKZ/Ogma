@@ -1,0 +1,96 @@
+.is-checkradio + label {
+  padding-top: 1px !important;
+  -webkit-user-select: none; }
+
+html, body, #react-root {
+  background-color: #eee;
+  position: relative;
+  display: block;
+  height: 100%; }
+
+.page {
+  margin-left: 70px;
+  padding: 15px 25px; }
+
+.env-selector {
+  border-right: solid 1px #bbb;
+  background-color: #ccc;
+  position: fixed;
+  z-index: 999;
+  height: 100%;
+  width: 70px;
+  left: 0;
+  top: 0; }
+
+.env-selector .env-button-wrapper {
+  margin: 10px; }
+
+.env-selector .env-button {
+  background-color: #798468;
+  border: solid 1px #bbb;
+  text-decoration: none;
+  border-radius: 5px;
+  text-align: center;
+  position: relative;
+  display: block;
+  height: 50px;
+  color: #fff;
+  width: 50px; }
+
+.env-selector .env-button.env-active:after {
+  transform: translate(52px, 18px) rotate(-45deg);
+  border-bottom-right-radius: 100px;
+  border: solid 1px #bbb;
+  background-color: #eee;
+  position: absolute;
+  display: block;
+  height: 12px;
+  content: '';
+  z-index: -1;
+  width: 12px;
+  left: 0;
+  top: 0;
+  border-bottom: none;
+  border-right: none; }
+
+.env-selector .env-button * {
+  line-height: 50px; }
+
+.env-selector .env-button.home-env {
+  background-image: url("../ogma-icon-128.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 40px 40px;
+  background-color: #fcb192; }
+
+.env-selector .env-button.add-env {
+  background-color: transparent;
+  border: dashed 1px #999;
+  box-shadow: none;
+  color: #999; }
+
+.env-tab-box {
+  border-top-left-radius: 0;
+  padding: 1.25rem;
+  margin-top: -24px; }
+
+.env-tab-level {
+  margin-bottom: 1.25rem; }
+
+.file-entry {
+  -webkit-user-select: none; }
+  .file-entry-list {
+    border: solid 1px #ddd;
+    padding: 3px; }
+    .file-entry-list:not(:first-of-type) {
+      border-top: none; }
+    .file-entry-list .file-entry-icon, .file-entry-list .file-entry-name {
+      vertical-align: middle;
+      display: inline-block;
+      padding: 3px; }
+    .file-entry-list .file-entry-icon {
+      width: 50px; }
+      .file-entry-list .file-entry-icon, .file-entry-list .file-entry-icon *, .file-entry-list .file-entry-icon *:before {
+        font-size: 1.3rem;
+        text-align: center;
+        margin: auto; }

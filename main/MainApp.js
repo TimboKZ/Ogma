@@ -6,8 +6,9 @@
 
 const os = require('os');
 const path = require('path');
-const {app, BrowserWindow} = require('electron');
 const {enableLiveReload} = require('electron-compile');
+const {app, BrowserWindow} = require('electron');
+const windowStateKeeper = require('electron-window-state');
 
 const Util = require('./Util');
 const OgmaCore = require('./OgmaCore');
@@ -51,11 +52,18 @@ class MainApp {
     }
 
     createWindow() {
+        const mainWindowState = windowStateKeeper({
+            defaultWidth: 1280,
+            defaultHeight: 860,
+        });
         this.mainWindow = new BrowserWindow({
-            width: 1280,
-            height: 720,
+            x: mainWindowState.x,
+            y: mainWindowState.y,
+            width: mainWindowState.width,
+            height: mainWindowState.height,
             icon: path.join(Util.getStaticPath(), 'ogma-icon-128.png'),
         });
+        mainWindowState.manage(this.mainWindow);
         this.mainWindow.loadFile(path.join(Util.getStaticPath(), 'index.html'));
 
         // Open the DevTools.

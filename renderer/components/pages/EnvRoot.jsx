@@ -21,7 +21,7 @@ const Tabs = [
     {path: '/configure', exact: false, icon: 'cog', name: 'Configure'},
 ];
 
-class EnvRoot extends React.Component {
+class EnvRoot extends React.PureComponent {
 
     static propTypes = {
         location: PropTypes.any,
@@ -42,10 +42,6 @@ class EnvRoot extends React.Component {
                 if (envSummary) this.setState({envSummary});
                 else alert('Nope!');
             });
-    }
-
-    activePathClass(uri) {
-        return this.props.location.pathname === `${this.props.match.path}${uri}` ? 'is-active' : '';
     }
 
     renderTabs() {
@@ -107,7 +103,7 @@ class EnvRoot extends React.Component {
                     <ViewPicker/>
                 </div>
             </div>
-            <div className="box" style={{marginTop: '-24px', borderTopLeftRadius: '0'}}>
+            <div className="box env-tab-box">
                 <HashRouter>
                     <div>{this.renderRoutes()}</div>
                 </HashRouter>

@@ -68,7 +68,7 @@ class EnvSelector extends React.Component {
 
                 <div className="env-button-wrapper tooltip is-tooltip-right" data-tooltip="Add a new environment">
                     <a className="env-button add-env" onClick={this.createEnvClick}>
-                        <Icon name="plus" bulmaWrapper={false}/>
+                        <Icon name="plus" wrapper={false}/>
                     </a>
                 </div>
 

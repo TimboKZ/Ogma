@@ -12,11 +12,11 @@ class Icon extends React.Component {
     static propTypes = {
         name: PropTypes.string.isRequired,
         size: PropTypes.oneOf(['small', 'medium', 'large']),
-        bulmaWrapper: PropTypes.bool,
+        wrapper: PropTypes.bool,
     };
 
     static defaultProps = {
-        bulmaWrapper: true,
+        wrapper: true, // Enables Bulma wrapper for the icon
     };
 
     constructor(props) {
@@ -26,7 +26,7 @@ class Icon extends React.Component {
     render() {
         const faIcon = <i className={`fas fa-${this.props.name}`}/>;
 
-        if (this.props.bulmaWrapper) {
+        if (this.props.wrapper) {
             let className = 'icon';
             if (this.props.size) className += ` is-${this.props.size}`;
             return <span className={className}>{faIcon}</span>;

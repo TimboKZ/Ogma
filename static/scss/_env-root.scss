@@ -1,0 +1,40 @@
+@import 'variables';
+
+.env-tab-box {
+    border-top-left-radius: 0;
+    padding: $env-tab-margin;
+    margin-top: -24px;
+}
+
+.env-tab-level {
+    margin-bottom: $env-tab-margin;
+}
+
+.file-entry {
+    -webkit-user-select: none;
+
+    &-list {
+        border: solid 1px $file-entry-list-border;
+        padding: 3px;
+
+        &:not(:first-of-type) {
+            border-top: none;
+        }
+
+        .file-entry-icon, .file-entry-name {
+            vertical-align: middle;
+            display: inline-block;
+            padding: 3px;
+        }
+
+        .file-entry-icon {
+            width: 50px;
+            &, & *, & *:before {
+                font-size: 1.3rem;
+                text-align: center;
+                margin: auto;
+            }
+        }
+    }
+
+}
