@@ -38,7 +38,7 @@ class FileManager {
         for (let i = 0; i < fileNames.length; i++) {
             const name = fileNames[i];
             const filePath = path.join(data.dir, name);
-            files[i] = Util.getFileData(filePath);
+            files[i] = Util.getFileData({filePath});
         }
 
         this.directoryCache[data.dir] = files;

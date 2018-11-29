@@ -9,11 +9,20 @@ const PropTypes = require('prop-types');
 
 const IconTabs = require('./IconTabs');
 
-const SortSlugs = ['relevance', 'name', 'size'];
+const SortOrders = {
+    Relevance: 'relevance',
+    Name: 'name',
+    Size: 'size',
+};
+const SortSlugs = [
+    SortOrders.Relevance,
+    SortOrders.Name,
+    SortOrders.Size,
+];
 const SortTypes = [
-    {slug: SortSlugs[0], name: 'Relevance', icon: 'sort-amount-down'},
-    {slug: SortSlugs[1], name: 'Name', icon: 'sort-alpha-down'},
-    {slug: SortSlugs[2], name: 'Size', icon: 'sort-numeric-down'},
+    {slug: SortOrders.Relevance, name: 'Relevance', icon: 'sort-amount-down'},
+    {slug: SortOrders.Name, name: 'Name', icon: 'sort-alpha-down'},
+    {slug: SortOrders.Size, name: 'Size', icon: 'sort-numeric-down'},
 ];
 
 class SortPicker extends React.Component {
@@ -24,7 +33,7 @@ class SortPicker extends React.Component {
     };
 
     static defaultProps = {
-        activeOption: SortSlugs[0],
+        activeOption: SortOrders.Name,
     };
 
     constructor(props) {
@@ -48,3 +57,5 @@ class SortPicker extends React.Component {
 }
 
 module.exports = SortPicker;
+module.exports.SortOrders = SortOrders;
+module.exports.SortSlugs = SortSlugs;

@@ -17,6 +17,7 @@ class DataManager {
         this.envIds = [];
         this.envSummaries = [];
         this.envSummaryMap = {};
+
         this.fileManagerMap = {};
     }
 
@@ -62,6 +63,15 @@ class DataManager {
     getEnvSummary(data) {
         return this._ensureEnvSummaries()
             .then(() => this.envSummaryMap[data.id]);
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.filePath
+     * @returns {Promise<string|null>}
+     */
+    getThumbnail(data) {
+        return promiseIpc.send('getThumbnail', data.filePath);
     }
 
     /**

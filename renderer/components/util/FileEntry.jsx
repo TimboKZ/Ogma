@@ -12,6 +12,7 @@ const Icon = require('../util/Icon');
 const {Views, ViewSlugs} = require('../util/ViewPicker');
 
 // Prepare icon name for different file types
+const ExitFolderIcon = 'level-up-alt';
 const DefaultFolderIcon = 'folder';
 const DefaultFileIcon = 'file';
 const IconsToExtensions = {
@@ -32,24 +33,34 @@ class FileEntry extends React.Component {
         onEntrySingleClick: PropTypes.func.isRequired,
         onEntryDoubleClick: PropTypes.func.isRequired,
         file: PropTypes.object.isRequired,
-        view: PropTypes.oneOf(ViewSlugs).isRequired,
-        showExtension: PropTypes.bool.isRequired,
+        view: PropTypes.oneOf(ViewSlugs),
+        collapseLongNames: PropTypes.bool,
+        showExtension: PropTypes.bool,
+    };
+
+    static defaultProps = {
+        view: Views.List,
+        collapseLongNames: false,
+        showExtension: true,
     };
 
     constructor(props) {
         super(props);
+        this.state = {
+            thumbPath: null,
+        };
 
         this.clickCount = 0;
         this.singleClickTimer = '';
     }
 
-    getIconName() {
+    componentDidMount() {
         const file = this.props.file;
-        if (file.isDirectory) return DefaultFolderIcon;
-
-        const icon = FileIcons[file.ext];
-        if (icon) return icon;
-        else return DefaultFileIcon;
+        if (file.isFile) {
+            window.dataManager.getThumbnail({filePath: file.path})
+                .then(thumbPath => this.setState({thumbPath}))
+                .catch(error => console.log(error));
+        }
     }
 
     entryClick() {
@@ -66,10 +77,23 @@ class FileEntry extends React.Component {
         }
     }
 
-    renderIcon() {
-        const externalIcon = FileIconsJs.getClassWithColor(this.props.file.base);
-        if (externalIcon) return <i className={externalIcon}/>;
+    getIconName() {
+        const file = this.props.file;
+        if (file.isDirectory) {
+            if (file.name === '..') return ExitFolderIcon;
+            return DefaultFolderIcon;
+        }
 
+        const icon = FileIcons[file.ext];
+        if (icon) return icon;
+        else return DefaultFileIcon;
+    }
+
+    renderIcon() {
+        const file = this.props.file;
+
+        const externalIcon = FileIconsJs.getClassWithColor(file.base);
+        if (externalIcon) return <i className={externalIcon}/>;
         return <Icon name={this.getIconName()} wrapper={false}/>;
 
     }
@@ -77,22 +101,44 @@ class FileEntry extends React.Component {
     renderFileName() {
         const file = this.props.file;
 
+        // Prepare file name
+        let name = this.props.file.name;
+        if (this.props.collapseLongNames) {
+            const length = name.length;
+            if (length > 70) name = `${name.slice(0, 30)}<span>...</span>${name.slice(length - 20)}`;
+        }
+
+        // Prepare file extension
         let extComp;
-        if (this.props.showExtension && file.name !== '..') {
-            if (file.isDirectory) extComp = ' folder';
-            else extComp = `.${file.ext}`;
+        let extClass = 'file-entry-name-info';
+        if (this.props.showExtension) {
+            if (file.isDirectory) {
+                extComp = file.name === '..' ? '(go back)' : '(folder)';
+            } else {
+                extComp = file.ext ? `.${file.ext}` : ' (no extension)';
+                if (file.ext) extClass = 'file-entry-name-ext';
+            }
         }
 
         return <span>
-            <strong>{this.props.file.name}</strong>
-            <span className="has-text-grey">{extComp}</span>
+            <span className="file-entry-name-base" dangerouslySetInnerHTML={{__html: name}}/>
+            <span className={extClass}>{extComp}</span>
         </span>;
     }
 
     render() {
+        const file = this.props.file;
+
+        let iconComp;
+        if (this.state.thumbPath) {
+            iconComp = <div className="file-entry-thumb"><img alt={file.name} src={this.state.thumbPath}/></div>;
+        } else {
+            iconComp = <div className="file-entry-icon">{this.renderIcon()}</div>;
+        }
+
         const className = `file-entry file-entry-${this.props.view}`;
         return <div className={className} onClick={() => this.entryClick()}>
-            <div className="file-entry-icon">{this.renderIcon()}</div>
+            {iconComp}
             <div className="file-entry-name">{this.renderFileName()}</div>
         </div>;
     }

@@ -27,6 +27,7 @@
   "homepage": "https://github.com/v1ndic4te/Ogma#readme",
   "devDependencies": {
     "@types/fs-extra": "^5.0.4",
+    "@types/lodash": "^4.14.118",
     "babel-core": "^6.26.3",
     "babel-eslint": "^10.0.1",
     "babel-plugin-transform-class-properties": "^6.24.1",
@@ -46,6 +47,7 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.5.0",
     "acorn": "^6.0.4",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
     "better-sqlite3": "^5.0.1",
     "bluebird": "^3.5.3",
     "bulma": "^0.7.2",
@@ -55,14 +57,16 @@
     "electron-compile": "^6.4.3",
     "electron-window-state": "^5.0.3",
     "file-icons-js": "^1.0.3",
+    "fluent-ffmpeg": "^2.1.2",
     "fs-extra": "^7.0.1",
+    "lodash": "^4.17.11",
     "prop-types": "^15.6.2",
     "react": "^16.6.3",
     "react-dom": "^16.6.3",
     "react-helmet": "^5.2.0",
     "react-markdown": "^4.0.3",
     "react-router-dom": "^4.3.1",
-    "shorthash": "0.0.2",
-    "sweetalert2": "^7.29.2"
+    "sweetalert2": "^7.29.2",
+    "trie-search": "^1.2.8"
   }
 }

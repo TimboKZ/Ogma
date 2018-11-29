@@ -47,6 +47,9 @@ class IpcModule {
 
             return envSummaries;
         });
+        promiseIpc.on('getThumbnail', filePath => {
+            return this.ogmaCore.getThumbManager().getThumbnail({filePath});
+        });
     }
 
 }

@@ -7,8 +7,10 @@
 const path = require('path');
 const fs = require('fs-extra');
 const {app} = require('electron');
-const shorthash = require('shorthash');
+const Database = require('better-sqlite3');
 
+const Util = require('./Util');
+const ThumbManager = require('./ThumbManager');
 const Environment = require('./Environment');
 
 class OgmaCore {
@@ -20,8 +22,20 @@ class OgmaCore {
     constructor(data) {
         this.ogmaDir = data.ogmaDir;
         this.envDir = path.join(data.ogmaDir, 'envs');
+        this.thumbsDir = path.join(data.ogmaDir, 'thumbs');
+        this.thumbsDbFile = path.join(data.ogmaDir, 'thumbs.sqlite3');
+
+        this.thumbManager = new ThumbManager({thumbsDir: this.thumbsDir, thumbsDbFile: this.thumbsDbFile});
+
         this.initWarnings = [];
         this.envMap = {};
+    }
+
+    /**
+     * @returns {ThumbManager}
+     */
+    getThumbManager() {
+        return this.thumbManager;
     }
 
     getEnvMap() {
@@ -30,6 +44,7 @@ class OgmaCore {
 
     init() {
         this.initDirectory();
+        this.initThumbs();
         this.initEnvs();
     }
 
@@ -54,14 +69,27 @@ class OgmaCore {
             }
         }
 
-        if (!fs.pathExistsSync(this.envDir)) fs.ensureDirSync(this.envDir);
+        fs.ensureDirSync(this.envDir);
     }
 
+    initThumbs() {
+        fs.ensureDirSync(this.thumbsDir);
+        const db = new Database(this.thumbsDbFile);
+        db.exec(`CREATE TABLE IF NOT EXISTS thumbnails(path  TEXT PRIMARY KEY UNIQUE, dir TEXT, thumb TEXT, epoch INTEGER)`);
+        db.exec(`CREATE INDEX IF NOT EXISTS thumb_dir ON thumbnails (dir)`);
+        db.close();
+
+        this.thumbManager.init();
+    }
+
+    /**
+     * Loads of all the environments from `~/.ogma/envs/` folder.
+     */
     initEnvs() {
         const envs = fs.readdirSync(this.envDir);
         console.log(`Found ${envs.length} environments on startup.`);
         for (const dbFileName of envs) {
-            if (!dbFileName.startsWith('env-')) continue;
+            if (!dbFileName.startsWith('env')) continue;
             const dbPath = path.join(this.envDir, dbFileName);
             const env = new Environment({dbPath});
 
@@ -75,15 +103,11 @@ class OgmaCore {
      */
     createEnvironment(data) {
         const basename = path.basename(data.envRoot).trim();
-        const slug = basename.replace(/\W/g, '').toLowerCase();
-        const hash = shorthash.unique(`${new Date().getTime()}${data.envRoot}`);
 
         let envId;
         let dbPath;
         do {
-            envId = 'env-';
-            if (slug.length !== 0) envId += `${slug.substr(0, 6)}-`;
-            envId += hash.substr(0, 6);
+            envId = Util.generateBaseName({fileName: basename, groupName: 'env'});
             dbPath = path.join(this.envDir, `${envId}.sqlite3`);
         } while (fs.pathExistsSync(dbPath));
 

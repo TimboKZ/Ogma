@@ -24,8 +24,8 @@ class Environment {
         this.propSelect.pluck(true);
         this.propSelect = this.propSelect.get.bind(this.propSelect);
 
-        this.propUpdate = this.db.prepare('UPDATE properties SET value = ? WHERE name = ?');
-        this.propUpdate = (a, b) => this.propUpdate.run(b, a);
+        const propUpdate = this.db.prepare('UPDATE properties SET value = ? WHERE name = ?');
+        this.propUpdate = (a, b) => propUpdate.run(b, a);
     }
 
     /**

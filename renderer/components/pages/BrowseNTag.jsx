@@ -4,12 +4,16 @@
  * @licence GPL-3.0
  */
 
+const _ = require('lodash');
 const path = require('path');
 const React = require('react');
+const PropTypes = require('prop-types');
 const {shell} = require('electron');
 const {Menu} = require('electron').remote;
-const PropTypes = require('prop-types');
 
+const {StateProps} = require('../util/GlobalState');
+const {SortOrders} = require('../util/SortPicker');
+const {Views} = require('../util/ViewPicker');
 const Util = require('../../../main/Util');
 const Icon = require('../util/Icon');
 const FileEntry = require('../util/FileEntry');
@@ -19,7 +23,8 @@ const menu = Menu.buildFromTemplate([
 ]);
 
 const Options = {
-    FolderFirst: 'folders-first',
+    CollapseLong: 'collapse-long',
+    FoldersFirst: 'folders-first',
     ShowExtensions: 'show-exts',
     ShowHidden: 'show-hidden',
 };
@@ -36,15 +41,19 @@ class BrowseNTag extends React.Component {
         this.state = {
             currentDir: this.props.envSummary.root,
             currentFiles: null,
+            sort: window.globalState.get(StateProps.EnvSort),
+            view: window.globalState.get(StateProps.EnvView),
             optionState: {
-                [Options.FolderFirst]: true,
+                [Options.CollapseLong]: true,
+                [Options.FoldersFirst]: true,
                 [Options.ShowExtensions]: true,
                 [Options.ShowHidden]: true,
             },
         };
 
         this.optionCheckboxes = [
-            {id: Options.FolderFirst, name: 'Show folders first'},
+            {id: Options.CollapseLong, name: 'Collapse long names'},
+            {id: Options.FoldersFirst, name: 'Show folders first'},
             {id: Options.ShowExtensions, name: 'Show extensions'},
             {id: Options.ShowHidden, name: 'Show hidden files'},
         ];
@@ -52,6 +61,8 @@ class BrowseNTag extends React.Component {
             {icon: 'sync-alt', name: 'Refresh directory', callback: () => null},
             {icon: 'folder-minus', name: 'Clear file cache', callback: () => null},
         ];
+
+        this.globalStateChange = this.globalStateChange.bind(this);
         this.optionStateChange = this.optionStateChange.bind(this);
         this.fileEntrySingleClick = this.fileEntrySingleClick.bind(this);
         this.fileEntryDoubleClick = this.fileEntryDoubleClick.bind(this);
@@ -60,13 +71,17 @@ class BrowseNTag extends React.Component {
     static getDerivedStateFromProps(props, state) {
         const newDirState = BrowseNTag.parseDir(props, state);
         if (newDirState) state = newDirState;
-
-
-
         return state;
     }
 
+    componentDidMount() {
+        window.globalState.addListener(StateProps.EnvSort, this.globalStateChange, false);
+        window.globalState.addListener(StateProps.EnvView, this.globalStateChange, false);
+    }
+
     componentWillUnmount() {
+        window.globalState.removeListener(StateProps.EnvSort, this.globalStateChange);
+        window.globalState.removeListener(StateProps.EnvView, this.globalStateChange);
         BrowseNTag.prevDir = null;
     }
 
@@ -83,6 +98,20 @@ class BrowseNTag extends React.Component {
 
     changeDirTo(newDir) {
         this.setState({currentDir: newDir});
+    }
+
+    globalStateChange(propName, propValue) {
+        switch (propName) {
+            case StateProps.EnvSort:
+                this.setState({sort: propValue});
+                break;
+            case StateProps.EnvView:
+                this.setState({view: propValue});
+                break;
+            default:
+                // Do nothing for unknown properties
+                break;
+        }
     }
 
     optionStateChange(event) {
@@ -177,30 +206,61 @@ class BrowseNTag extends React.Component {
         const files = this.state.currentFiles;
         if (!files) return <h1>Loading...</h1>;
 
-        const view = 'list';
-
         const fileComps = [];
         if (this.state.currentDir !== this.props.envSummary.root) {
-            const parentDir = Util.getFileData(path.normalize(path.join(this.state.currentDir, '..')));
+            const filePath = path.normalize(path.join(this.state.currentDir, '..'));
+            const parentDir = Util.getFileData({filePath});
             parentDir.name = '..';
             fileComps.push(<FileEntry key={`parent-entry-${parentDir.path}`}
                                       onEntrySingleClick={this.fileEntrySingleClick}
                                       onEntryDoubleClick={this.fileEntryDoubleClick}
-                                      file={parentDir} view={view}
+                                      file={parentDir} view={this.state.view}
+                                      collapseLongNames={this.state.optionState[Options.CollapseLong]}
                                       showExtension={this.state.optionState[Options.ShowExtensions]}/>);
         }
 
-        // TODO: Sort `files` array
+        const compare = (fileA, fileB) => {
+            if (this.state.optionState[Options.FoldersFirst]) {
+                if (fileA.isDirectory && !fileB.isDirectory) return -1;
+                if (!fileA.isDirectory && fileB.isDirectory) return 1;
+            }
+
+            return fileA.name.localeCompare(fileB.name);
+        };
+        files.sort(compare);
 
         for (const file of files) {
             fileComps.push(<FileEntry key={`entry-${file.path}`}
                                       onEntrySingleClick={this.fileEntrySingleClick}
                                       onEntryDoubleClick={this.fileEntryDoubleClick}
-                                      file={file} view={view}
+                                      file={file} view={this.state.view}
+                                      collapseLongNames={this.state.optionState[Options.CollapseLong]}
                                       showExtension={this.state.optionState[Options.ShowExtensions]}/>);
         }
 
         return fileComps;
+    }
+
+    renderFileList() {
+        const fileComps = this.renderFiles();
+
+        let fileListContent;
+        let sliceIndex;
+        switch (this.state.view) {
+            case Views.ListColumns:
+                sliceIndex = fileComps.length <= 5 ? 5 : Math.floor(fileComps.length / 2);
+                fileListContent = <div className="columns is-2 is-variable">
+                    <div className="column">{fileComps.slice(0, sliceIndex)}</div>
+                    <div className="column">{fileComps.slice(sliceIndex)}</div>
+                </div>;
+                break;
+            default:
+                fileListContent = fileComps;
+                break;
+        }
+
+        const className = `file-list file-list-${this.state.view}`;
+        return <div className={className}>{fileListContent}</div>;
     }
 
     render() {
@@ -233,9 +293,7 @@ class BrowseNTag extends React.Component {
                 </div>
             </div>
 
-            <div className="file-list">
-                {this.renderFiles()}
-            </div>
+            {this.renderFileList()}
         </React.Fragment>;
     }
 

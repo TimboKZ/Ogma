@@ -10,5 +10,5 @@ const MainApp = require('./MainApp');
 // FIXME: Disable security warnings during development
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
 
-const mainApp = new MainApp({});
+const mainApp = new MainApp();
 mainApp.init();

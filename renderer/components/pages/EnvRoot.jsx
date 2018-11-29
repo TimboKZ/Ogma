@@ -9,6 +9,7 @@ const PropTypes = require('prop-types');
 const {Link} = require('react-router-dom');
 const {Route, HashRouter} = require('react-router-dom');
 
+const {StateProps} = require('../util/GlobalState');
 const Icon = require('../util/Icon');
 const SortPicker = require('../util/SortPicker');
 const ViewPicker = require('../util/ViewPicker');
@@ -99,8 +100,10 @@ class EnvRoot extends React.PureComponent {
                     </div>
                 </div>
                 <div className="level-right" style={{marginRight: '-1px'}}>
-                    <SortPicker/>
-                    <ViewPicker/>
+                    <SortPicker activeOption={window.globalState.get(StateProps.EnvSort)}
+                                onOptionChange={sort => window.globalState.set(StateProps.EnvSort, sort)}/>
+                    <ViewPicker activeOption={window.globalState.get(StateProps.EnvView)}
+                                onOptionChange={view => window.globalState.set(StateProps.EnvView, view)}/>
                 </div>
             </div>
             <div className="box env-tab-box">

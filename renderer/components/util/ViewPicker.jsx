@@ -11,12 +11,14 @@ const IconTabs = require('./IconTabs');
 
 const Views = {
     List: 'list',
+    ListColumns: 'list-columns',
     ThumbsSmall: 'thumbs-small',
     ThumbsLarge: 'thumbs-large',
-}
-const ViewSlugs = [Views.List, Views.ThumbsSmall, Views.ThumbsLarge];
+};
+const ViewSlugs = [Views.List, Views.ListColumns, Views.ThumbsSmall, Views.ThumbsLarge];
 const ViewTypes = [
     {slug: Views.List, name: 'List', icon: 'th-list'},
+    {slug: Views.ListColumns, name: 'List columns', icon: 'grip-vertical'},
     {slug: Views.ThumbsSmall, name: 'Small thumbnails', icon: 'th'},
     {slug: Views.ThumbsLarge, name: 'Large thumbnails', icon: 'th-large'},
 ];

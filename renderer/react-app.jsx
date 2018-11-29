@@ -14,10 +14,13 @@ const ReactDOM = require('react-dom');
 const {AppContainer} = require('react-hot-loader');
 
 const DataManager = require('./components/util/DataManager');
+const GlobalState = require('./components/util/GlobalState');
 
 window.dataManager = new DataManager();
 window.dataManager._ensureEnvSummaries()
     .then(() => {
+        window.globalState = new GlobalState();
+
         const render = () => {
             const AppRoot = require('./components/AppRoot');
             const reactRoot = document.querySelector('#react-root');

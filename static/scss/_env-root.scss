@@ -13,26 +13,91 @@
 .file-entry {
     -webkit-user-select: none;
 
-    &-list {
-        border: solid 1px $file-entry-list-border;
+    &-thumb, &-icon, &-name {
+        vertical-align: middle;
+        display: inline-block;
         padding: 3px;
+    }
 
-        &:not(:first-of-type) {
-            border-top: none;
+    &-thumb, &-icon {
+        &, & *, & *:before {
+            text-align: center;
+            font-size: 1.3rem;
+            margin: auto;
         }
+    }
 
-        .file-entry-icon, .file-entry-name {
-            vertical-align: middle;
-            display: inline-block;
-            padding: 3px;
+    &-thumb {
+        &, & *, & *:before {
+            font-size: 0;
         }
+    }
 
-        .file-entry-icon {
+    &-name {
+        word-wrap: break-word;
+        font-size: 1rem;
+        &-base {
+            font-weight: 500;
+            span {
+                color: #ddd;
+            }
+        }
+        &-ext {
+            color: #aaa;
+        }
+        &-info {
+            margin-left: 5px;
+            font-size: 0.8em;
+            color: #ddd;
+        }
+    }
+
+    &-list, &-list-columns {
+        border-bottom: solid 1px $file-entry-list-border;
+        padding: 3px;
+        &:last-of-type {
+            border-bottom: none;
+        }
+        .file-entry-thumb, .file-entry-icon {
             width: 50px;
+        }
+    }
+
+    &-list {
+        .file-entry-thumb, .file-entry-icon {
+            width: 60px;
+        }
+        .file-entry-icon {
             &, & *, & *:before {
-                font-size: 1.3rem;
-                text-align: center;
-                margin: auto;
+                font-size: 1.5rem;
+            }
+        }
+        .file-entry-name {
+            font-size: 1.3rem;
+        }
+    }
+
+    &-thumbs-small, &-thumbs-large {
+        margin: 0 $env-tab-margin/2 $env-tab-margin/2;
+        display: inline-block;
+        vertical-align: top;
+        text-align: center;
+        width: 120px;
+        .file-entry-thumb, .file-entry-icon, .file-entry-name {
+            display: block;
+        }
+        .file-entry-icon {
+            &, & *, & *:before {
+                font-size: 3rem;
+            }
+        }
+    }
+
+    &-thumbs-large {
+        width: 200px;
+        .file-entry-icon {
+            &, & *, & *:before {
+                font-size: 4rem;
             }
         }
     }

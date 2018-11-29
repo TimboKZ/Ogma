@@ -79,18 +79,53 @@ html, body, #react-root {
 
 .file-entry {
   -webkit-user-select: none; }
-  .file-entry-list {
-    border: solid 1px #ddd;
+  .file-entry-thumb, .file-entry-icon, .file-entry-name {
+    vertical-align: middle;
+    display: inline-block;
     padding: 3px; }
-    .file-entry-list:not(:first-of-type) {
-      border-top: none; }
-    .file-entry-list .file-entry-icon, .file-entry-list .file-entry-name {
-      vertical-align: middle;
-      display: inline-block;
-      padding: 3px; }
-    .file-entry-list .file-entry-icon {
+  .file-entry-thumb, .file-entry-thumb *, .file-entry-thumb *:before, .file-entry-icon, .file-entry-icon *, .file-entry-icon *:before {
+    text-align: center;
+    font-size: 1.3rem;
+    margin: auto; }
+  .file-entry-thumb, .file-entry-thumb *, .file-entry-thumb *:before {
+    font-size: 0; }
+  .file-entry-name {
+    word-wrap: break-word;
+    font-size: 1rem; }
+    .file-entry-name-base {
+      font-weight: 500; }
+      .file-entry-name-base span {
+        color: #ddd; }
+    .file-entry-name-ext {
+      color: #aaa; }
+    .file-entry-name-info {
+      margin-left: 5px;
+      font-size: 0.8em;
+      color: #ddd; }
+  .file-entry-list, .file-entry-list-columns {
+    border-bottom: solid 1px #efefef;
+    padding: 3px; }
+    .file-entry-list:last-of-type, .file-entry-list-columns:last-of-type {
+      border-bottom: none; }
+    .file-entry-list .file-entry-thumb, .file-entry-list .file-entry-icon, .file-entry-list-columns .file-entry-thumb, .file-entry-list-columns .file-entry-icon {
       width: 50px; }
-      .file-entry-list .file-entry-icon, .file-entry-list .file-entry-icon *, .file-entry-list .file-entry-icon *:before {
-        font-size: 1.3rem;
-        text-align: center;
-        margin: auto; }
+  .file-entry-list .file-entry-thumb, .file-entry-list .file-entry-icon {
+    width: 60px; }
+  .file-entry-list .file-entry-icon, .file-entry-list .file-entry-icon *, .file-entry-list .file-entry-icon *:before {
+    font-size: 1.5rem; }
+  .file-entry-list .file-entry-name {
+    font-size: 1.3rem; }
+  .file-entry-thumbs-small, .file-entry-thumbs-large {
+    margin: 0 0.625rem 0.625rem;
+    display: inline-block;
+    vertical-align: top;
+    text-align: center;
+    width: 120px; }
+    .file-entry-thumbs-small .file-entry-thumb, .file-entry-thumbs-small .file-entry-icon, .file-entry-thumbs-small .file-entry-name, .file-entry-thumbs-large .file-entry-thumb, .file-entry-thumbs-large .file-entry-icon, .file-entry-thumbs-large .file-entry-name {
+      display: block; }
+    .file-entry-thumbs-small .file-entry-icon, .file-entry-thumbs-small .file-entry-icon *, .file-entry-thumbs-small .file-entry-icon *:before, .file-entry-thumbs-large .file-entry-icon, .file-entry-thumbs-large .file-entry-icon *, .file-entry-thumbs-large .file-entry-icon *:before {
+      font-size: 3rem; }
+  .file-entry-thumbs-large {
+    width: 200px; }
+    .file-entry-thumbs-large .file-entry-icon, .file-entry-thumbs-large .file-entry-icon *, .file-entry-thumbs-large .file-entry-icon *:before {
+      font-size: 4rem; }

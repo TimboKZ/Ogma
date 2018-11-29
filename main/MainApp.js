@@ -16,10 +16,7 @@ const IpcModule = require('./IpcModule');
 
 class MainApp {
 
-    /**
-     * @param {object} data
-     */
-    constructor(data) {
+    constructor() {
         this.mainWindow = null;
 
         this.ogmaDir = path.join(os.homedir(), '.ogma');
