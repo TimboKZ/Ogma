@@ -6,10 +6,11 @@
 
 const EventEmitter = require('events');
 
-const {SortOrder} = require('./SortPicker');
-const {View} = require('./ViewPicker');
+const {SortOrder} = require('../components/helpers/SortPicker');
+const {View} = require('../components/helpers/ViewPicker');
 
 const StateProps = {
+    EnvSummariesChanged: 'env-sum-change',
     EnvSort: 'env-sort',
     EnvView: 'env-view',
 };
@@ -20,7 +21,10 @@ class PropEmitter extends EventEmitter {
 class GlobalState {
 
     constructor() {
+        if (!window.dataManager) throw new Error('DataManager should be initialised before GlobalState!');
+
         this.propValues = {
+            [StateProps.EnvSummariesChanged]: true,
             [StateProps.EnvSort]: SortOrder.Name,
             [StateProps.EnvView]: View.ListColumns,
         };
@@ -41,6 +45,14 @@ class GlobalState {
     get(propName) {
         this.ensure(propName, 'get');
         return this.propValues[propName];
+    }
+
+    /**
+     * @param {string} propName
+     */
+    notify(propName) {
+        this.ensure(propName);
+        this.propEmitter.emit(propName, propName, this.propValues[propName]);
     }
 
     /**

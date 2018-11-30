@@ -6,7 +6,7 @@
 
 const Database = require('better-sqlite3');
 
-const {Setting} = require('../shared/typedef');
+const {Setting} = require('../../shared/typedef');
 
 class SettingsManager {
 

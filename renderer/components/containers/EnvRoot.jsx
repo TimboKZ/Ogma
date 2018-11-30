@@ -6,12 +6,12 @@
 
 const React = require('react');
 const PropTypes = require('prop-types');
-const {Route, HashRouter} = require('react-router-dom');
+const {Switch, Route} = require('react-router-dom');
 
-const {StateProps} = require('../util/GlobalState');
-const Tabs = require('../util/Tabs');
-const SortPicker = require('../util/SortPicker');
-const ViewPicker = require('../util/ViewPicker');
+const {StateProps} = require('../../util/GlobalState');
+const Tabs = require('../helpers/Tabs');
+const SortPicker = require('../helpers/SortPicker');
+const ViewPicker = require('../helpers/ViewPicker');
 const BrowseTag = require('./BrowseTag');
 const Configure = require('./Configure');
 
@@ -90,9 +90,7 @@ class EnvRoot extends React.Component {
                 </div>
             </div>
             <div className="box env-tab-box">
-                <HashRouter>
-                    <div>{this.renderRoutes()}</div>
-                </HashRouter>
+                <Switch>{this.renderRoutes()}</Switch>
             </div>
         </div>;
     }

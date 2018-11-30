@@ -8,8 +8,8 @@ const React = require('react');
 const PropTypes = require('prop-types');
 const FileIconsJs = require('file-icons-js');
 
-const Icon = require('../util/Icon');
-const {View, Views} = require('../util/ViewPicker');
+const Icon = require('.//Icon');
+const {View, Views} = require('.//ViewPicker');
 
 // Prepare icon name for different file types
 const ExitFolderIcon = 'level-up-alt';
@@ -67,7 +67,7 @@ class FileEntry extends React.Component {
 
         const file = this.props.file;
         if (file.isFile) {
-            window.dataManager.getThumbnail({filePath: file.path})
+            window.dataManager.ipcModule.getThumbnail({filePath: file.path})
                 .then(thumbPath => {
                     // Generating the thumbnail can take a while, need to make sure this component is still mounted
                     // when we update the thumbnail path.

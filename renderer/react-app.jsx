@@ -9,12 +9,21 @@ console.log(`We are using: Node.js ${versions.node}, Chromium ${versions.chrome}
 
 const React = require('react');
 const ReactDOM = require('react-dom');
+const Promise = require('bluebird');
 const {AppContainer} = require('react-hot-loader');
+const {HashRouter} = require('react-router-dom');
 
-const ErrorHandler = require('./components/util/ErrorHandler');
-const DataManager = require('./components/util/DataManager');
-const GlobalState = require('./components/util/GlobalState');
+const {HomeRoutePath} = require('../shared/typedef');
+const ErrorHandler = require('./util/ErrorHandler');
+const DataManager = require('./util/DataManager');
+const GlobalState = require('./util/GlobalState');
 const {Setting} = require('../shared/typedef');
+
+Promise.config({
+    // Disable the "a promise was created in a handler but none were returned from it" warning because our code
+    // relies on this logic in many different places.
+    warnings: {wForgottenReturn: false},
+});
 
 window.errorHandler = new ErrorHandler();
 window.dataManager = new DataManager();
@@ -24,7 +33,7 @@ window.dataManager.init()
 
         // Set starting page
         const lastHash = window.dataManager.getSetting(Setting.lastPageHash);
-        window.location.hash = lastHash ? lastHash : '#/home';
+        window.location.hash = lastHash ? lastHash : `#${HomeRoutePath}`;
 
         // Remember last visited page
         window.addEventListener('hashchange', () => {
@@ -38,7 +47,7 @@ window.dataManager.init()
         const render = () => {
             const AppRoot = require('./components/AppRoot');
             const reactRoot = document.querySelector('#react-root');
-            ReactDOM.render(<AppContainer><AppRoot/></AppContainer>, reactRoot);
+            ReactDOM.render(<HashRouter><AppContainer><AppRoot/></AppContainer></HashRouter>, reactRoot);
         };
         render();
 

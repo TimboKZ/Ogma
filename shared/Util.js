@@ -28,6 +28,16 @@ class Util {
     }
 
     /**
+     * @param {function} promiseFunc
+     * @param {number} delay
+     */
+    static delayFunc(promiseFunc, delay) {
+        return new Promise(resolve => {
+            setTimeout(() => resolve(promiseFunc()), delay);
+        });
+    }
+
+    /**
      * @param {object} data
      * @param {string} data.groupName
      * @param {string} data.fileName

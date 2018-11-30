@@ -13,11 +13,11 @@
  * @typedef {object} EnvSummary
  * @property {string} id
  * @property {string} name
- * @property {string} code
  * @property {string} root
  * @property {string} icon
  * @property {string} colour
- * @property {string} dbFilePath
+ * @property {string} dbFile
+ * @property {boolean} isHidden
  */
 
 /**
@@ -38,9 +38,26 @@ const Setting = {
     lastPageHash: 'lastPageHash',
 };
 
+/**
+ * @enum {string} EnvProperty
+ */
+const EnvProperty = {
+    id: 'id',
+    name: 'name',
+    root: 'root',
+    icon: 'icon',
+    colour: 'colour',
+    dbFile: 'dbFile',
+    isHidden: 'isHidden',
+};
+
+const HomeRoutePath = '/home';
+
 const BulmaSizes = ['small', 'medium', 'large'];
 
 module.exports = {
     Setting,
+    EnvProperty,
+    HomeRoutePath,
     BulmaSizes,
 };

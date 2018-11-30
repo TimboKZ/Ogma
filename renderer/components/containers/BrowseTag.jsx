@@ -9,18 +9,13 @@ const path = require('path');
 const React = require('react');
 const PropTypes = require('prop-types');
 const {shell} = require('electron');
-const {Menu} = require('electron').remote;
 
-const {StateProps} = require('../util/GlobalState');
-const {SortOrder} = require('../util/SortPicker');
-const {View} = require('../util/ViewPicker');
+const {StateProps} = require('../../util/GlobalState');
+const {SortOrder} = require('../helpers/SortPicker');
+const {View} = require('../helpers/ViewPicker');
 const Util = require('../../../shared/Util');
-const Icon = require('../util/Icon');
-const FileEntry = require('../util/FileEntry');
-
-const menu = Menu.buildFromTemplate([
-    {label: 'Hello!'},
-]);
+const Icon = require('../helpers/Icon');
+const FileEntry = require('../helpers/FileEntry');
 
 const Options = {
     CollapseLong: 'collapse-long',
@@ -128,7 +123,6 @@ class BrowseTag extends React.Component {
      */
     fileEntrySingleClick(file) {
         if (file.name === '..') this.changeDirTo(file.path);
-        // menu.popup({});
     }
 
     /**

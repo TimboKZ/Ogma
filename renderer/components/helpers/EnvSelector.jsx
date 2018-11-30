@@ -5,36 +5,20 @@
  */
 
 const React = require('react');
+const PropTypes = require('prop-types');
 const {NavLink} = require('react-router-dom');
-const promiseIpc = require('electron-promise-ipc');
 
 const Icon = require('./Icon');
 
 class EnvSelector extends React.Component {
 
-    constructor(props) {
-        super(props);
-        this.state = {
-            envSummaries: window.dataManager.getEnvSummaries(),
-        };
-
-        this.createEnvClick = this.createEnvClick.bind(this);
-    }
-
-    createEnvClick() {
-        promiseIpc.send('createEnv')
-            .then(envId => {
-                // Check if user cancelled the operation or if there was an error
-                if (!envId) return;
-
-                window.dataManager._refreshEnvSummaries()
-                    .then(() => window.dataManager.getEnvSummaries())
-                    .then(envSummaries => this.setState({envSummaries}));
-            });
-    }
+    static propTypes = {
+        envSummaries: PropTypes.array.isRequired,
+        onCreateEnvClick: PropTypes.func.isRequired,
+    };
 
     renderEnvButtons() {
-        const envs = this.state.envSummaries;
+        const envs = this.props.envSummaries;
         const comps = new Array(envs.length);
         for (let i = 0; i < comps.length; i++) {
             const env = envs[i];
@@ -69,7 +53,7 @@ class EnvSelector extends React.Component {
                 {this.renderEnvButtons()}
 
                 <div className="env-button-wrapper tooltip is-tooltip-right" data-tooltip="Add a new environment">
-                    <a className="env-button add-env" onClick={this.createEnvClick}>
+                    <a className="env-button add-env" onClick={this.props.onCreateEnvClick}>
                         <Icon name="plus" wrapper={false}/>
                     </a>
                 </div>

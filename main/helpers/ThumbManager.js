@@ -10,7 +10,7 @@ const Promise = require('bluebird');
 const ffmpeg = require('fluent-ffmpeg');
 const Database = require('better-sqlite3');
 
-const Util = require('../shared/Util');
+const Util = require('../../shared/Util');
 
 // TODO: Add Trie to check
 

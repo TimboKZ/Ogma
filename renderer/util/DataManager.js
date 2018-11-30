@@ -5,9 +5,8 @@
  */
 
 const Promise = require('bluebird');
-const promiseIpc = require('electron-promise-ipc');
 
-const IpcModule = require('../../../shared/IpcModule');
+const IpcModule = require('../../shared/IpcModule');
 const FileManager = require('./FileManager');
 
 class DataManager {
@@ -26,7 +25,10 @@ class DataManager {
 
     init() {
         return Promise.resolve()
-            .then(() => this.ipcModule = new IpcModule({mode: 'client'}))
+            .then(() => {
+                this.ipcModule = new IpcModule({mode: 'client'});
+                this.ipcModule.init();
+            })
             .then(() => this._refreshSettings())
             .then(() => this._refreshEnvSummaries());
     }
@@ -65,7 +67,7 @@ class DataManager {
     }
 
     _refreshEnvSummaries() {
-        return promiseIpc.send('getEnvSummaries')
+        return this.ipcModule.getEnvSummaries()
             .then(envSummaries => {
                 const envIds = [];
                 const envSummaryMap = {};
@@ -79,7 +81,6 @@ class DataManager {
                 this.envSummaries = envSummaries;
                 this.envSummaryMap = envSummaryMap;
                 this.fileManagerMap = fileManagerMap;
-                this.summariesFetched = true;
             });
     }
 
@@ -98,15 +99,6 @@ class DataManager {
      */
     getEnvSummary(data) {
         return this.envSummaryMap[data.id];
-    }
-
-    /**
-     * @param {object} data
-     * @param {string} data.filePath
-     * @returns {Promise<string|null>}
-     */
-    getThumbnail(data) {
-        return promiseIpc.send('getThumbnail', data.filePath);
     }
 
     /**

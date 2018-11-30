@@ -8,10 +8,9 @@ const path = require('path');
 const React = require('react');
 const PropTypes = require('prop-types');
 const ReactMarkdown = require('react-markdown');
-const promiseIpc = require('electron-promise-ipc');
 
 const Util = require('../../../shared/Util');
-const Tabs = require('../util/Tabs');
+const Tabs = require('../helpers/Tabs');
 
 const TabOptions = [
     {path: '', exact: true, name: 'Greeting', icon: 'child'},
@@ -37,7 +36,7 @@ class HomePage extends React.Component {
     }
 
     componentDidMount() {
-        promiseIpc.send('getInitWarnings')
+        window.dataManager.ipcModule.getInitWarnings()
             .then(warnings => this.setState({warnings}));
     }
 
