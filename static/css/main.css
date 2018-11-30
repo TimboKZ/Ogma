@@ -12,6 +12,15 @@ html, body, #react-root {
   margin-left: 70px;
   padding: 15px 25px; }
 
+.text-loader-loading {
+  color: #ccc; }
+
+.text-loader-failed {
+  color: #fca3a8; }
+
+.text-loader-none {
+  color: #999; }
+
 .env-selector {
   border-right: solid 1px #bbb;
   background-color: #ccc;
@@ -114,7 +123,7 @@ html, body, #react-root {
   .file-entry-list .file-entry-icon, .file-entry-list .file-entry-icon *, .file-entry-list .file-entry-icon *:before {
     font-size: 1.5rem; }
   .file-entry-list .file-entry-name {
-    font-size: 1.3rem; }
+    font-size: 1.15rem; }
   .file-entry-thumbs-small, .file-entry-thumbs-large {
     margin: 0 0.625rem 0.625rem;
     display: inline-block;

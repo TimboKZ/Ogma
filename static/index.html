@@ -11,6 +11,10 @@
     <div id="react-root"></div>
 
     <script>
+        if (process.env['NODE_ENV'] === 'development') {
+            require('electron-react-devtools').install();
+        }
+
         require('../renderer/react-app.jsx');
     </script>
 </body>

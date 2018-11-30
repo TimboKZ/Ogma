@@ -9,7 +9,7 @@ const PropTypes = require('prop-types');
 const FileIconsJs = require('file-icons-js');
 
 const Icon = require('../util/Icon');
-const {Views, ViewSlugs} = require('../util/ViewPicker');
+const {View, Views} = require('../util/ViewPicker');
 
 // Prepare icon name for different file types
 const ExitFolderIcon = 'level-up-alt';
@@ -32,14 +32,19 @@ class FileEntry extends React.Component {
     static propTypes = {
         onEntrySingleClick: PropTypes.func.isRequired,
         onEntryDoubleClick: PropTypes.func.isRequired,
+
+        // Inst
         file: PropTypes.object.isRequired,
-        view: PropTypes.oneOf(ViewSlugs),
+        view: PropTypes.oneOf(Views),
         collapseLongNames: PropTypes.bool,
         showExtension: PropTypes.bool,
+
+        active: PropTypes.bool,
+        selected: PropTypes.bool,
     };
 
     static defaultProps = {
-        view: Views.List,
+        view: View.List,
         collapseLongNames: false,
         showExtension: true,
     };
@@ -50,17 +55,30 @@ class FileEntry extends React.Component {
             thumbPath: null,
         };
 
+        this.mounted = false;
+
+        // Used to distinguish between single and double clicks
         this.clickCount = 0;
         this.singleClickTimer = '';
     }
 
     componentDidMount() {
+        this.mounted = true;
+
         const file = this.props.file;
         if (file.isFile) {
             window.dataManager.getThumbnail({filePath: file.path})
-                .then(thumbPath => this.setState({thumbPath}))
+                .then(thumbPath => {
+                    // Generating the thumbnail can take a while, need to make sure this component is still mounted
+                    // when we update the thumbnail path.
+                    if (this.mounted) this.setState({thumbPath});
+                })
                 .catch(error => console.log(error));
         }
+    }
+
+    componentWillUnmount() {
+        this.mounted = false;
     }
 
     entryClick() {

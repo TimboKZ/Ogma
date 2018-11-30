@@ -4,30 +4,45 @@
  * @licence GPL-3.0
  */
 
-console.log(`We are using:
-- Node.js ${process.versions.node}
-- Chromium ${process.versions.chrome}
-- Electron ${process.versions.electron}`);
+const versions = process.versions;
+console.log(`We are using: Node.js ${versions.node}, Chromium ${versions.chrome}, Electron ${versions.electron}.`);
 
 const React = require('react');
 const ReactDOM = require('react-dom');
 const {AppContainer} = require('react-hot-loader');
 
+const ErrorHandler = require('./components/util/ErrorHandler');
 const DataManager = require('./components/util/DataManager');
 const GlobalState = require('./components/util/GlobalState');
+const {Setting} = require('../shared/typedef');
 
+window.errorHandler = new ErrorHandler();
 window.dataManager = new DataManager();
-window.dataManager._ensureEnvSummaries()
+window.dataManager.init()
     .then(() => {
         window.globalState = new GlobalState();
 
+        // Set starting page
+        const lastHash = window.dataManager.getSetting(Setting.lastPageHash);
+        window.location.hash = lastHash ? lastHash : '#/home';
+
+        // Remember last visited page
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash;
+            window.dataManager.setSetting(Setting.lastPageHash, hash)
+                .catch(window.errorHandler.handle);
+
+        });
+
+        // Render the React app
         const render = () => {
             const AppRoot = require('./components/AppRoot');
             const reactRoot = document.querySelector('#react-root');
             ReactDOM.render(<AppContainer><AppRoot/></AppContainer>, reactRoot);
         };
-
         render();
+
+        // Enable hot-loading if it's supported
         if (module.hot) {
             module.hot.accept(render);
         }

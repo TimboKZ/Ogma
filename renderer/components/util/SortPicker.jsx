@@ -7,33 +7,33 @@
 const React = require('react');
 const PropTypes = require('prop-types');
 
-const IconTabs = require('./IconTabs');
+const Tabs = require('./Tabs');
 
-const SortOrders = {
+const SortOrder = {
     Relevance: 'relevance',
     Name: 'name',
     Size: 'size',
 };
-const SortSlugs = [
-    SortOrders.Relevance,
-    SortOrders.Name,
-    SortOrders.Size,
+const SortOrders = [
+    SortOrder.Relevance,
+    SortOrder.Name,
+    SortOrder.Size,
 ];
-const SortTypes = [
-    {slug: SortOrders.Relevance, name: 'Relevance', icon: 'sort-amount-down'},
-    {slug: SortOrders.Name, name: 'Name', icon: 'sort-alpha-down'},
-    {slug: SortOrders.Size, name: 'Size', icon: 'sort-numeric-down'},
+const SortOptions = [
+    {id: SortOrder.Relevance, tooltip: 'Relevance', icon: 'sort-amount-down'},
+    {id: SortOrder.Name, tooltip: 'Name', icon: 'sort-alpha-down'},
+    {id: SortOrder.Size, tooltip: 'Size', icon: 'sort-numeric-down'},
 ];
 
 class SortPicker extends React.Component {
 
     static propTypes = {
-        activeOption: PropTypes.oneOf(SortSlugs),
+        activeOption: PropTypes.oneOf(SortOrders),
         onOptionChange: PropTypes.func,
     };
 
     static defaultProps = {
-        activeOption: SortOrders.Name,
+        activeOption: SortOrder.Name,
     };
 
     constructor(props) {
@@ -45,9 +45,11 @@ class SortPicker extends React.Component {
             <p className="level-item">Sort by</p>
             <div className="level-item">
                 <div className="tabs is-toggle is-small" style={{overflow: 'visible'}}>
-                    <IconTabs
+                    <Tabs
+                        size="small"
+                        options={SortOptions}
+                        className="is-toggle"
                         activeOption={this.props.activeOption}
-                        optionTypes={SortTypes}
                         onOptionChange={this.props.onOptionChange}/>
                 </div>
             </div>
@@ -57,5 +59,5 @@ class SortPicker extends React.Component {
 }
 
 module.exports = SortPicker;
+module.exports.SortOrder = SortOrder;
 module.exports.SortOrders = SortOrders;
-module.exports.SortSlugs = SortSlugs;

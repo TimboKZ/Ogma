@@ -6,8 +6,8 @@
 
 const EventEmitter = require('events');
 
-const {SortOrders} = require('./SortPicker');
-const {Views} = require('./ViewPicker');
+const {SortOrder} = require('./SortPicker');
+const {View} = require('./ViewPicker');
 
 const StateProps = {
     EnvSort: 'env-sort',
@@ -21,8 +21,8 @@ class GlobalState {
 
     constructor() {
         this.propValues = {
-            [StateProps.EnvSort]: SortOrders.Name,
-            [StateProps.EnvView]: Views.ListColumns,
+            [StateProps.EnvSort]: SortOrder.Name,
+            [StateProps.EnvView]: View.ListColumns,
         };
         this.propEmitter = new PropEmitter();
     }

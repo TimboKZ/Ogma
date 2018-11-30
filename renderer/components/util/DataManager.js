@@ -4,16 +4,19 @@
  * @licence GPL-3.0
  */
 
-const React = require('react');
 const Promise = require('bluebird');
 const promiseIpc = require('electron-promise-ipc');
 
+const IpcModule = require('../../../shared/IpcModule');
 const FileManager = require('./FileManager');
 
 class DataManager {
 
     constructor() {
-        this.summariesFetched = false;
+        this.ipcModule = null;
+
+        this.settings = null;
+
         this.envIds = [];
         this.envSummaries = [];
         this.envSummaryMap = {};
@@ -21,9 +24,44 @@ class DataManager {
         this.fileManagerMap = {};
     }
 
-    _ensureEnvSummaries() {
-        if (this.summariesFetched) return Promise.resolve();
-        else return this._refreshEnvSummaries();
+    init() {
+        return Promise.resolve()
+            .then(() => this.ipcModule = new IpcModule({mode: 'client'}))
+            .then(() => this._refreshSettings())
+            .then(() => this._refreshEnvSummaries());
+    }
+
+    _refreshSettings() {
+        return this.ipcModule.getSettings()
+            .then(settings => this.settings = settings);
+    }
+
+    /**
+     * @returns {SettingsData}
+     */
+    getSettings() {
+        return this.settings;
+    }
+
+    /**
+     * @param {Setting} name
+     * @returns {string}
+     */
+    getSetting(name) {
+        return this.settings[name];
+    }
+
+    /**
+     * @param {Setting} name
+     * @param {string} value
+     * @returns {Promise<void>}
+     */
+    setSetting(name, value) {
+        return this.ipcModule.setSetting({name, value})
+            .then(() => {
+                // Update the in-place copy if no error have occurred during communication.
+                this.settings[name] = value;
+            });
     }
 
     _refreshEnvSummaries() {
@@ -46,23 +84,20 @@ class DataManager {
     }
 
     getEnvIds() {
-        return this._ensureEnvSummaries()
-            .then(() => this.envIds);
+        return this.envIds;
     }
 
     getEnvSummaries() {
-        return this._ensureEnvSummaries()
-            .then(() => this.envSummaries);
+        return this.envSummaries;
     }
 
     /**
      * @param {object} data
      * @param {string} data.id
-     * @returns {Promise<EnvSummary>}
+     * @returns {EnvSummary}
      */
     getEnvSummary(data) {
-        return this._ensureEnvSummaries()
-            .then(() => this.envSummaryMap[data.id]);
+        return this.envSummaryMap[data.id];
     }
 
     /**

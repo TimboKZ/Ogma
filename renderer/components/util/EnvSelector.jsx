@@ -15,19 +15,22 @@ class EnvSelector extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            envSummaries: [],
+            envSummaries: window.dataManager.getEnvSummaries(),
         };
 
         this.createEnvClick = this.createEnvClick.bind(this);
     }
 
-    componentDidMount() {
-        window.dataManager.getEnvSummaries()
-            .then(envSummaries => this.setState({envSummaries}));
-    }
-
     createEnvClick() {
-        promiseIpc.send('createEnv');
+        promiseIpc.send('createEnv')
+            .then(envId => {
+                // Check if user cancelled the operation or if there was an error
+                if (!envId) return;
+
+                window.dataManager._refreshEnvSummaries()
+                    .then(() => window.dataManager.getEnvSummaries())
+                    .then(envSummaries => this.setState({envSummaries}));
+            });
     }
 
     renderEnvButtons() {
@@ -58,8 +61,7 @@ class EnvSelector extends React.Component {
 
                 <div className="env-button-wrapper tooltip is-tooltip-right" data-tooltip="Home">
                     <NavLink
-                        to="/"
-                        exact
+                        to="/home"
                         className="env-button home-env"
                         activeClassName="env-active"/>
                 </div>

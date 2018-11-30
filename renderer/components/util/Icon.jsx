@@ -7,11 +7,13 @@
 const React = require('react');
 const PropTypes = require('prop-types');
 
+const {BulmaSizes} = require('../../../shared/typedef');
+
 class Icon extends React.Component {
 
     static propTypes = {
+        size: PropTypes.oneOf(BulmaSizes),
         name: PropTypes.string.isRequired,
-        size: PropTypes.oneOf(['small', 'medium', 'large']),
         wrapper: PropTypes.bool,
     };
 

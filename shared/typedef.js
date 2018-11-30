@@ -5,11 +5,19 @@
  */
 
 /**
+ * @typedef {object} SettingsData
+ * @property {string} lastPageHash
+ */
+
+/**
  * @typedef {object} EnvSummary
  * @property {string} id
  * @property {string} name
+ * @property {string} code
  * @property {string} root
+ * @property {string} icon
  * @property {string} colour
+ * @property {string} dbFilePath
  */
 
 /**
@@ -22,3 +30,17 @@
  * @property {boolean} isDirectory
  * @property {boolean} isSymlink
  */
+
+/**
+ * @enum {string} Setting
+ */
+const Setting = {
+    lastPageHash: 'lastPageHash',
+};
+
+const BulmaSizes = ['small', 'medium', 'large'];
+
+module.exports = {
+    Setting,
+    BulmaSizes,
+};

@@ -9,3 +9,15 @@ html, body, #react-root {
     margin-left: 70px;
     padding: 15px 25px;
 }
+
+.text-loader {
+    &-loading {
+        color: #ccc;
+    }
+    &-failed {
+        color: #fca3a8;
+    }
+    &-none {
+        color: #999;
+    }
+}

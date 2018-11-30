@@ -12,9 +12,9 @@ const {shell} = require('electron');
 const {Menu} = require('electron').remote;
 
 const {StateProps} = require('../util/GlobalState');
-const {SortOrders} = require('../util/SortPicker');
-const {Views} = require('../util/ViewPicker');
-const Util = require('../../../main/Util');
+const {SortOrder} = require('../util/SortPicker');
+const {View} = require('../util/ViewPicker');
+const Util = require('../../../shared/Util');
 const Icon = require('../util/Icon');
 const FileEntry = require('../util/FileEntry');
 
@@ -29,7 +29,7 @@ const Options = {
     ShowHidden: 'show-hidden',
 };
 
-class BrowseNTag extends React.Component {
+class BrowseTag extends React.Component {
 
     static prevDir = null;
     static propTypes = {
@@ -69,7 +69,7 @@ class BrowseNTag extends React.Component {
     }
 
     static getDerivedStateFromProps(props, state) {
-        const newDirState = BrowseNTag.parseDir(props, state);
+        const newDirState = BrowseTag.parseDir(props, state);
         if (newDirState) state = newDirState;
         return state;
     }
@@ -82,15 +82,15 @@ class BrowseNTag extends React.Component {
     componentWillUnmount() {
         window.globalState.removeListener(StateProps.EnvSort, this.globalStateChange);
         window.globalState.removeListener(StateProps.EnvView, this.globalStateChange);
-        BrowseNTag.prevDir = null;
+        BrowseTag.prevDir = null;
     }
 
     static parseDir(props, state) {
         // Do nothing if the directory hasn't changed
-        if (BrowseNTag.prevDir && BrowseNTag.prevDir === state.currentDir) return null;
+        if (BrowseTag.prevDir && BrowseTag.prevDir === state.currentDir) return null;
 
         // Otherwise parse new directory and update the prevDir reference
-        BrowseNTag.prevDir = state.currentDir;
+        BrowseTag.prevDir = state.currentDir;
         const fileManager = window.dataManager.getFileManager({envId: props.envSummary.id});
         state.currentFiles = fileManager.fetchFiles({dir: state.currentDir});
         return state;
@@ -127,6 +127,7 @@ class BrowseNTag extends React.Component {
      * @param {FileData} file
      */
     fileEntrySingleClick(file) {
+        if (file.name === '..') this.changeDirTo(file.path);
         // menu.popup({});
     }
 
@@ -247,7 +248,7 @@ class BrowseNTag extends React.Component {
         let fileListContent;
         let sliceIndex;
         switch (this.state.view) {
-            case Views.ListColumns:
+            case View.ListColumns:
                 sliceIndex = fileComps.length <= 5 ? 5 : Math.floor(fileComps.length / 2);
                 fileListContent = <div className="columns is-2 is-variable">
                     <div className="column">{fileComps.slice(0, sliceIndex)}</div>
@@ -299,4 +300,4 @@ class BrowseNTag extends React.Component {
 
 }
 
-module.exports = BrowseNTag;
+module.exports = BrowseTag;

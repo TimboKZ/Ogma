@@ -22,16 +22,17 @@ class AppRoot extends React.Component {
     }
 
     render() {
+        const envIds = window.dataManager.getEnvIds();
         return (
-                <HashRouter>
-                    <React.Fragment>
-                        <EnvSelector envs={this.state.selectorEnvs}/>
-                        <div className="page">
-                            <Route path="/" exact component={HomePage}/>
-                            <Route path="/envs/:envId" component={EnvRoot}/>
-                        </div>
-                    </React.Fragment>
-                </HashRouter>
+            <HashRouter>
+                <React.Fragment>
+                    <EnvSelector envs={this.state.selectorEnvs}/>
+                    <div className="page">
+                        <Route path="/home" component={HomePage}/>
+                        <Route path={`/envs/:envId(${envIds.join('|')})`} component={EnvRoot}/>
+                    </div>
+                </React.Fragment>
+            </HashRouter>
         );
     }
 

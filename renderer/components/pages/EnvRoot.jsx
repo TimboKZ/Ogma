@@ -6,23 +6,23 @@
 
 const React = require('react');
 const PropTypes = require('prop-types');
-const {Link} = require('react-router-dom');
 const {Route, HashRouter} = require('react-router-dom');
 
 const {StateProps} = require('../util/GlobalState');
-const Icon = require('../util/Icon');
+const Tabs = require('../util/Tabs');
 const SortPicker = require('../util/SortPicker');
 const ViewPicker = require('../util/ViewPicker');
-const BrowseNTag = require('./BrowseNTag');
+const BrowseTag = require('./BrowseTag');
+const Configure = require('./Configure');
 
-const Tabs = [
+const TabOptions = [
     {path: '', exact: true, icon: 'eye', name: 'Explore'},
     {path: '/search', exact: false, icon: 'search', name: 'Search'},
-    {path: '/browse-n-tag', exact: false, icon: 'tag', name: 'Browse & tag', comp: BrowseNTag},
-    {path: '/configure', exact: false, icon: 'cog', name: 'Configure'},
+    {path: '/browse-n-tag', exact: false, icon: 'tag', name: 'Browse & tag', comp: BrowseTag},
+    {path: '/configure', exact: false, icon: 'cog', name: 'Configure', comp: Configure},
 ];
 
-class EnvRoot extends React.PureComponent {
+class EnvRoot extends React.Component {
 
     static propTypes = {
         location: PropTypes.any,
@@ -31,41 +31,25 @@ class EnvRoot extends React.PureComponent {
 
     constructor(props) {
         super(props);
-
         this.state = {
-            envSummary: null,
+            envSummary: window.dataManager.getEnvSummary({id: props.match.params.envId}),
         };
     }
 
-    componentDidMount() {
-        window.dataManager.getEnvSummary({id: this.props.match.params.envId})
-            .then(envSummary => {
-                if (envSummary) this.setState({envSummary});
-                else alert('Nope!');
-            });
-    }
-
-    renderTabs() {
-        const comps = new Array(Tabs.length);
-        for (const i in Tabs) {
-            const tab = Tabs[i];
-            const linkPath = `${this.props.match.url}${tab.path}`;
-            const activeClass = linkPath === this.props.location.pathname ? 'is-active' : '';
-
-            comps[i] = <li key={`env-tab-${tab.path}`} className={activeClass}>
-                <Link to={linkPath}><Icon name={tab.icon}/><span>{tab.name}</span></Link>
-            </li>;
+    componentDidUpdate(prevProps) {
+        if (prevProps.match.params.envId !== this.props.match.params.envId) {
+            this.setState({envSummary: window.dataManager.getEnvSummary({id: this.props.match.params.envId})});
         }
-        return comps;
     }
 
     renderRoutes() {
         const comps = [];
         const parentPath = this.props.match.path;
-        for (const tab of Tabs) {
+        for (const tab of TabOptions) {
             if (!tab.comp) continue;
+            const TabComp = tab.comp;
             comps.push(<Route key={`env-router-${tab.path}`} path={`${parentPath}${tab.path}`} exact={tab.exact}
-                              render={props => <tab.comp envSummary={this.state.envSummary} {...props}/>}/>);
+                              render={props => <TabComp envSummary={this.state.envSummary} {...props}/>}/>);
         }
         return comps;
     }
@@ -94,9 +78,8 @@ class EnvRoot extends React.PureComponent {
             <div className="level">
                 <div className="level-left" style={{marginLeft: '-1px'}}>
                     <div className="level-item">
-                        <div className="tabs is-boxed">
-                            <ul>{this.renderTabs()}</ul>
-                        </div>
+                        <Tabs options={TabOptions} useLinks={true} basePath={this.props.match.url}
+                              location={this.props.location} className="is-boxed"/>
                     </div>
                 </div>
                 <div className="level-right" style={{marginRight: '-1px'}}>

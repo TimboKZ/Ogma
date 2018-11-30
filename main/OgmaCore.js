@@ -9,7 +9,8 @@ const fs = require('fs-extra');
 const {app} = require('electron');
 const Database = require('better-sqlite3');
 
-const Util = require('./Util');
+const Util = require('../shared/Util');
+const SettingsManager = require('./SettingsManager');
 const ThumbManager = require('./ThumbManager');
 const Environment = require('./Environment');
 
@@ -22,20 +23,20 @@ class OgmaCore {
     constructor(data) {
         this.ogmaDir = data.ogmaDir;
         this.envDir = path.join(data.ogmaDir, 'envs');
+
+        this.settingsDb = null;
+        this.getSetting = null;
+        this.setSetting = null;
+        this.settingsDbFile = path.join(data.ogmaDir, 'settings.sqlite3');
+        this.settingsManager = new SettingsManager({settingsDbFile: this.settingsDbFile});
+
         this.thumbsDir = path.join(data.ogmaDir, 'thumbs');
         this.thumbsDbFile = path.join(data.ogmaDir, 'thumbs.sqlite3');
-
         this.thumbManager = new ThumbManager({thumbsDir: this.thumbsDir, thumbsDbFile: this.thumbsDbFile});
 
         this.initWarnings = [];
         this.envMap = {};
-    }
-
-    /**
-     * @returns {ThumbManager}
-     */
-    getThumbManager() {
-        return this.thumbManager;
+        this.hiddenEnvSummaryMap = {};
     }
 
     getEnvMap() {
@@ -44,14 +45,16 @@ class OgmaCore {
 
     init() {
         this.initDirectory();
-        this.initThumbs();
+        this.initSettings();
+        this.settingsManager.init();
+        this.thumbManager.init();
         this.initEnvs();
     }
 
     initDirectory() {
         const versionFile = path.join(this.ogmaDir, 'ogma.version');
 
-        if (!fs.pathExistsSync(this.ogmaDir)) {
+        if (!fs.pathExistsSync(this.ogmaDir) || fs.readdirSync(this.ogmaDir).length === 0) {
             fs.ensureDirSync(this.ogmaDir);
             fs.writeFileSync(versionFile, app.getVersion());
         } else {
@@ -62,7 +65,7 @@ class OgmaCore {
                     version. Current version: \`${app.getVersion()}\`; Folder version: \`${dirVersion}\`.`);
                 }
             } else {
-                // If the folder does not contain a version file, `.ogma/` either belongs to a different
+                // If the folder i does not contain a version file, `.ogma/` either belongs to a different
                 // application or is corrupted.
                 throw new Error('`.ogma` folder already exists in home ' +
                     'directory and appears to be corrupted!');
@@ -72,14 +75,16 @@ class OgmaCore {
         fs.ensureDirSync(this.envDir);
     }
 
-    initThumbs() {
-        fs.ensureDirSync(this.thumbsDir);
-        const db = new Database(this.thumbsDbFile);
-        db.exec(`CREATE TABLE IF NOT EXISTS thumbnails(path  TEXT PRIMARY KEY UNIQUE, dir TEXT, thumb TEXT, epoch INTEGER)`);
-        db.exec(`CREATE INDEX IF NOT EXISTS thumb_dir ON thumbnails (dir)`);
-        db.close();
+    initSettings() {
+        const db = new Database(this.settingsDbFile);
+        db.exec('CREATE TABLE IF NOT EXISTS settings (name TEXT PRIMARY KEY, value TEXT)');
 
-        this.thumbManager.init();
+        this.settingsDb = db;
+        const set = db.prepare('REPLACE INTO settings VALUES (?, ?)');
+        this.setSetting = (name, value) => set.run(name, value);
+        const get = db.prepare('SELECT value FROM settings WHERE name = ?');
+        get.pluck(true);
+        this.getSetting = name => get.get(name);
     }
 
     /**
@@ -90,10 +95,16 @@ class OgmaCore {
         console.log(`Found ${envs.length} environments on startup.`);
         for (const dbFileName of envs) {
             if (!dbFileName.startsWith('env')) continue;
-            const dbPath = path.join(this.envDir, dbFileName);
-            const env = new Environment({dbPath});
+            const dbFilePath = path.join(this.envDir, dbFileName);
+            const env = new Environment({dbFilePath});
 
-            this.envMap[env.getSummary().id] = env;
+            const summary = env.getSummary();
+            if (env.isHidden()) {
+                this.hiddenEnvSummaryMap[summary.id] = summary;
+                env.close();
+            } else {
+                this.envMap[summary.id] = env;
+            }
         }
     }
 
@@ -111,13 +122,13 @@ class OgmaCore {
             dbPath = path.join(this.envDir, `${envId}.sqlite3`);
         } while (fs.pathExistsSync(dbPath));
 
-        Environment.create({
+        this.envMap[envId] = Environment.create({
             envName: basename,
             envId,
             envRoot: data.envRoot,
-            dbPath,
+            envColour: '#c24968',
+            dbFilePath: dbPath,
         });
-
         return envId;
     }
 

@@ -6,7 +6,7 @@
 
 const path = require('path');
 const fs = require('fs-extra');
-const Util = require ('../../../main/Util');
+const Util = require ('../../../shared/Util');
 
 class FileManager {
 

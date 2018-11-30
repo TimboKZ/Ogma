@@ -10,9 +10,9 @@ const {enableLiveReload} = require('electron-compile');
 const {app, BrowserWindow} = require('electron');
 const windowStateKeeper = require('electron-window-state');
 
-const Util = require('./Util');
+const Util = require('../shared/Util');
 const OgmaCore = require('./OgmaCore');
-const IpcModule = require('./IpcModule');
+const IpcModule = require('../shared/IpcModule');
 
 class MainApp {
 
@@ -21,7 +21,7 @@ class MainApp {
 
         this.ogmaDir = path.join(os.homedir(), '.ogma');
         this.ogmaCore = new OgmaCore({ogmaDir: this.ogmaDir});
-        this.ipcModule = new IpcModule({mainApp: this, ogmaCore: this.ogmaCore});
+        this.ipcModule = new IpcModule({mode: 'server', ogmaCore: this.ogmaCore});
     }
 
     init() {
