@@ -104,6 +104,20 @@ class DataManager {
     /**
      * @param {object} data
      * @param {string} data.envId
+     * @param {EnvProperty} data.name
+     * @param {string} data.value
+     */
+    setEnvProperty(data) {
+        return this.ipcModule.setEnvProperty({envId: data.envId, name: data.name, value: data.value})
+            .then(() => {
+                // Update the in-place copy if no error have occurred during communication.
+                this.envSummaryMap[data.envId][data.name] = data.value;
+            });
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.envId
      */
     getFileManager(data) {
         if (!this.fileManagerMap[data.envId]) {

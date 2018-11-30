@@ -15,6 +15,8 @@ class Icon extends React.Component {
         size: PropTypes.oneOf(BulmaSizes),
         name: PropTypes.string.isRequired,
         wrapper: PropTypes.bool,
+
+        style: PropTypes.any,
     };
 
     static defaultProps = {
@@ -26,15 +28,15 @@ class Icon extends React.Component {
     }
 
     render() {
-        const faIcon = <i className={`fas fa-${this.props.name}`}/>;
-
         if (this.props.wrapper) {
             let className = 'icon';
             if (this.props.size) className += ` is-${this.props.size}`;
-            return <span className={className}>{faIcon}</span>;
-        } else {
-            return faIcon;
+            return <span className={className} style={this.props.style}>
+                <i className={`fas fa-${this.props.name}`}/>
+            </span>;
         }
+
+        return <i className={`fas fa-${this.props.name}`} style={this.props.style}/>;
     }
 
 }

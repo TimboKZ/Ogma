@@ -33,6 +33,7 @@ class IpcModule {
             this.ogmaCore = data.ogmaCore;
             this.settingsManager = this.ogmaCore.settingsManager;
             this.thumbManager = this.ogmaCore.thumbManager;
+            this.envManager = this.ogmaCore.envManager;
         }
     }
 
@@ -166,6 +167,18 @@ class IpcModule {
         }
 
         return envSummaries;
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @alias IpcModule.setEnvProperty
+     * @param {object} data
+     * @param {string} data.envId
+     * @param {string} data.name
+     * @param {string} data.value
+     */
+    server_setEnvProperty(data) {
+        this.envManager.getEnvMap()[data.envId].set(data.name, data.value);
     }
 
     // noinspection JSUnusedGlobalSymbols

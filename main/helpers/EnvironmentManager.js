@@ -53,6 +53,7 @@ class EnvironmentManager {
     createEnvironment(data) {
         const basename = path.basename(data.envRoot).trim();
 
+        // Pick a file name for the sqlite3 DB
         let envId;
         let dbFile;
         do {
@@ -60,11 +61,21 @@ class EnvironmentManager {
             dbFile = path.join(this.envsDir, `${envId}.sqlite3`);
         } while (fs.pathExistsSync(dbFile));
 
+        // Generate a code for the env-selector
+        let envIcon = '';
+        let parts = basename.split(' ', 1);
+        for (const part of parts) {
+            const slug = Util.slugify(part);
+            if (slug.length > 0) envIcon += slug.charAt(0);
+        }
+        envIcon = `_${envIcon.toUpperCase()}`;
+
         this.envMap[envId] = Environment.create({
             envName: basename,
             envId,
             envRoot: data.envRoot,
-            envColour: '#c24968',
+            envIcon,
+            envColour: '#4a148c',
             dbFile,
         });
         return envId;

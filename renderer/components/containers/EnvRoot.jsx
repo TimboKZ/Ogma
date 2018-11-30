@@ -55,23 +55,20 @@ class EnvRoot extends React.Component {
     }
 
     render() {
-        if (!this.state.envSummary) {
-            return <div className="pageloader"><span className="title">Pageloader</span></div>;
-        }
-        const envSummary = this.state.envSummary;
+        const summary = this.state.envSummary;
 
         return <div>
             <div className="level">
                 <div className="level-left" style={{marginLeft: '-1px'}}>
                     <div className="level-item">
                         <h2 className="title is-2 has-text-centered">
-                            {envSummary.name} <span style={{fontWeight: 'normal'}}>environment</span>
+                            {summary.name} <span style={{fontWeight: 'normal'}}>environment</span>
                         </h2>
                     </div>
                 </div>
                 <div className="level-right" style={{marginRight: '-1px'}}>
                     <div className="level-item">
-                        <p className="subtitle is-4 has-text-grey">{envSummary.root}</p>
+                        <p className="subtitle is-4 has-text-grey">{summary.root}</p>
                     </div>
                 </div>
             </div>

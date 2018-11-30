@@ -9,6 +9,7 @@ const PropTypes = require('prop-types');
 const {NavLink} = require('react-router-dom');
 
 const Icon = require('./Icon');
+const EnvIcon = require('./EnvIcon');
 
 class EnvSelector extends React.Component {
 
@@ -21,18 +22,20 @@ class EnvSelector extends React.Component {
         const envs = this.props.envSummaries;
         const comps = new Array(envs.length);
         for (let i = 0; i < comps.length; i++) {
-            const env = envs[i];
-            const symbol = env.name.toUpperCase().charAt(0);
+            const summary = envs[i];
+
             comps[i] = (
                 <div
-                    key={`env-${env.id}`}
+                    key={`env-${summary.id}`}
                     className="env-button-wrapper tooltip is-tooltip-right"
-                    data-tooltip={env.name}>
+                    data-tooltip={summary.name}>
                     <NavLink
-                        to={`/envs/${env.id}`}
+                        to={`/envs/${summary.id}`}
                         className="env-button"
                         activeClassName="env-active"
-                        style={{backgroundColor: env.colour}}><span>{symbol}</span></NavLink>
+                        style={{backgroundColor: summary.colour}}>
+                        <EnvIcon icon={summary.icon}/>
+                    </NavLink>
                 </div>
             );
         }
@@ -54,7 +57,7 @@ class EnvSelector extends React.Component {
 
                 <div className="env-button-wrapper tooltip is-tooltip-right" data-tooltip="Add a new environment">
                     <a className="env-button add-env" onClick={this.props.onCreateEnvClick}>
-                        <Icon name="plus" wrapper={false}/>
+                        <span className="env-icon"><Icon name="plus" wrapper={false}/></span>
                     </a>
                 </div>
 
