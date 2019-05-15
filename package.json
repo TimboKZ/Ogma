@@ -1,0 +1,43 @@
+{
+  "name": "ogma",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Tagging system for large file collections.",
+  "scripts": {
+    "start": "electron-webpack dev",
+    "compile": "electron-webpack",
+    "package": "npm run compile; electron-builder",
+    "watch-sass": "node-sass --watch ./static/scss/main.scss ./static/css/main.css"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/v1ndic4te/Ogma.git"
+  },
+  "keywords": [
+    "ogma",
+    "tagging",
+    "filesystem",
+    "file-management"
+  ],
+  "author": {
+    "name": "Timur Kuzhagaliyev",
+    "email": "tim.kuzh@gmail.com",
+    "url": "https://foxypanda.me/"
+  },
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/TimboKZ/Ogma/issues"
+  },
+  "homepage": "https://github.com/TimboKZ/Ogma#readme",
+  "devDependencies": {
+    "@babel/preset-react": "^7.0.0",
+    "electron": "3.1.9",
+    "electron-builder": "^20.40.2",
+    "electron-webpack": "^2.6.2",
+    "electron-webpack-eslint": "^4.0.2",
+    "webpack": "4.28.4"
+  },
+  "dependencies": {
+    "source-map-support": "^0.5.10"
+  }
+}
