@@ -1,0 +1,3 @@
+[submodule "ogma-frontend"]
+	path = ogma-frontend
+	url = git@github.com:TimboKZ/ogma-frontend.git

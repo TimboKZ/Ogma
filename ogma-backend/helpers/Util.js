@@ -22,6 +22,8 @@ const logger = createLogger({
     ),
 });
 
+const staticPath = path.normalize(path.join(packageRoot, 'ogma-frontend', 'build'));
+
 class Util {
 
     static getPackageVersion() {
@@ -30,6 +32,10 @@ class Util {
 
     static getLogger() {
         return logger;
+    }
+
+    static getStaticPath() {
+        return staticPath;
     }
 
     static isDevelopment() {
