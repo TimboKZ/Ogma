@@ -4,7 +4,8 @@
   "version": "2.0.0",
   "description": "Tagging system for large file collections.",
   "scripts": {
-    "start": "electron-webpack dev",
+    "start": "node ./backend/start-backend.js",
+    "dev": "electron-webpack dev",
     "compile": "electron-webpack",
     "package": "npm run compile; electron-builder",
     "watch-sass": "node-sass --watch ./static/scss/main.scss ./static/css/main.css"
@@ -31,13 +32,21 @@
   "homepage": "https://github.com/TimboKZ/Ogma#readme",
   "devDependencies": {
     "@babel/preset-react": "^7.0.0",
+    "@types/fs-extra": "^7.0.0",
     "electron": "3.1.9",
     "electron-builder": "^20.40.2",
     "electron-webpack": "^2.6.2",
     "electron-webpack-eslint": "^4.0.2",
+    "eslint-plugin-react": "^7.13.0",
     "webpack": "4.28.4"
   },
   "dependencies": {
-    "source-map-support": "^0.5.10"
+    "bluebird": "^3.5.4",
+    "cors": "^2.8.5",
+    "express": "^4.17.0",
+    "fs-extra": "^8.0.1",
+    "socket.io": "^2.2.0",
+    "source-map-support": "^0.5.10",
+    "winston": "^3.2.1"
   }
 }

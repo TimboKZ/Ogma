@@ -18,9 +18,9 @@ function createMainWindow() {
         window.loadURL(`http://localhost:${process.env.ELECTRON_WEBPACK_WDS_PORT}`);
     } else {
         window.loadURL(url.format({
-            pathname: path.join(__dirname, 'index.html'),
+            pathname: path.join(__dirname, 'start-backend.js.html'),
             protocol: 'file',
-            slashes: true
+            slashes: true,
         }));
     }
 
@@ -55,5 +55,15 @@ app.on('activate', () => {
 
 // create main BrowserWindow when electron is ready
 app.on('ready', () => {
-    mainWindow = createMainWindow();
+    // mainWindow = createMainWindow();
+    console.log('Hello world!');
+
+    const OgmaCore = require('../../backend/OgmaCore');
+    const Config = require('../../base-config');
+
+    const core = new OgmaCore({
+        host: Config.ogmaHost,
+        port: Config.ogmaPort,
+    });
+    core.init();
 });
