@@ -4,22 +4,36 @@
  * @license GPL-3.0
  */
 
+const _ = require('lodash');
 const fs = require('fs-extra');
 
 const Util = require('./Util');
+const {BackendEvents} = require('../typedef');
 
 class Config {
 
     /**
      * @param {object} data
+     * @param {EventEmitter} data.emitter
      * @param {string} data.configPath Absolute path to the config
      */
     constructor(data) {
+        this.emitter = data.emitter;
         this.configPath = data.configPath;
         this.configData = {};
+    }
 
+    init() {
         const configFileExists = this.ensureConfigFile();
         this.loadConfig({loadFromFile: configFileExists});
+        this.setupListeners();
+    }
+
+    setupListeners() {
+        this.emitter.on(BackendEvents.UpdateEnvSummaries, envSummaries => {
+            this.configData.openEnvironments = _.map(envSummaries, s => s.path);
+            this.saveConfig();
+        });
     }
 
     /**
@@ -68,12 +82,6 @@ class Config {
     getOpenEnvironments() {
         return this.configData.openEnvironments;
     }
-
-    setOpenEnvironments(openEnvironments) {
-        this.configData.openEnvironments = openEnvironments;
-        this.saveConfig();
-    }
-
 }
 
 module.exports = Config;

@@ -5,23 +5,11 @@
  */
 
 const path = require('path');
-const {createLogger, format, transports} = require('winston');
+
+const Logger = require('./Logger');
 
 const packageRoot = path.normalize(path.join(__dirname, '..', '..'));
 const packageInfo = require('../../package');
-
-const logger = createLogger({
-    transports: [new transports.Console()],
-    level: 'info',
-    format: format.combine(
-        format.colorize(),
-        format.timestamp({
-            format: 'YYYY-MM-DD HH:mm',
-        }),
-        format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`),
-    ),
-});
-
 const staticPath = path.normalize(path.join(packageRoot, 'ogma-frontend', 'build'));
 
 class Util {
@@ -31,7 +19,7 @@ class Util {
     }
 
     static getLogger() {
-        return logger;
+        return Logger;
     }
 
     static getStaticPath() {

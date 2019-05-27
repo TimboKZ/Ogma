@@ -10,6 +10,7 @@ const fs = require('fs-extra');
 const Promise = require('bluebird');
 const {app, BrowserWindow} = require('electron');
 const windowStateKeeper = require('electron-window-state');
+const EventEmitter2 = require('eventemitter2').EventEmitter2;
 
 const Util = require('./helpers/Util');
 const Config = require('./helpers/Config');
@@ -30,24 +31,27 @@ class OgmaCore {
         this.ogmaHomePath = path.join(os.homedir(), '.ogma');
         this.ogmaConfigPath = path.join(this.ogmaHomePath, 'ogmarc.json');
 
-        this.config = null;
-        this.envManager = null;
-        this.server = null;
+        const emitter = new EventEmitter2({
+            wildcard: true,
+            newListener: false,
+            maxListeners: 20,
+            verboseMemoryLeak: true,
+        });
+        this.config = new Config({emitter, configPath: this.ogmaConfigPath});
+        this.envManager = new EnvironmentManager({emitter, config: this.config});
+        this.server = new Server({emitter, port: this.port, envManager: this.envManager});
 
         this.mainWindow = null;
     }
 
     init() {
         return Promise.resolve()
-            .then(() => {
-                fs.ensureDirSync(this.ogmaHomePath);
-                this.config = new Config({configPath: this.ogmaConfigPath});
-                this.envManager = new EnvironmentManager({config: this.config});
-                this.server = new Server({port: this.port, envManager: this.envManager});
-
-                this.server.start();
-                this.setupElectronApp();
-            });
+            .then(() => fs.ensureDir(this.ogmaHomePath))
+            .then(() => this.config.init())
+            .then(() => this.envManager.init())
+            .then(() => this.server.init())
+            .then(() => this.server.start())
+            .then(() => this.setupElectronApp());
     }
 
     setupElectronApp() {

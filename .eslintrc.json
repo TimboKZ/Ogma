@@ -32,7 +32,6 @@
         "functions": "ignore"
       }
     ],
-    "eol-last": 2,
-    "no-console": "off"
+    "eol-last": 2
   }
 }
