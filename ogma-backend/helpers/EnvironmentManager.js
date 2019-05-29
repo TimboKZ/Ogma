@@ -11,7 +11,7 @@ const {dialog} = require('electron');
 
 const Util = require('./Util');
 const Environment = require('./Environment');
-const {BackendEvents} = require('../typedef');
+const {BackendEvents} = require('../../shared/typedef');
 
 const logger = Util.getLogger();
 
@@ -19,14 +19,14 @@ class EnvironmentManager {
 
     /**
      * @param {object} data
-     * @param {EventEmitter} data.emitter
-     * @param {Config} data.config
+     * @param {OgmaCore} data.ogmaCore
      */
     constructor(data) {
-        this.emitter = data.emitter;
-        this.config = data.config;
-        this.openEnvs = [];
+        this.ogmaCore = data.ogmaCore;
+        this.emitter = this.ogmaCore.emitter;
+        this.config = this.ogmaCore.config;
 
+        this.openEnvs = [];
         this.idMap = {};
         this.slugMap = {};
         this.pathMap = {};
@@ -80,7 +80,11 @@ class EnvironmentManager {
         let env;
         return Promise.resolve()
             .then(() => {
-                env = new Environment({path: data.path, envManager: this, allowCreate: data.allowCreate});
+                env = new Environment({
+                    ogmaCore: this.ogmaCore,
+                    path: data.path,
+                    envManager: this, allowCreate: data.allowCreate,
+                });
                 return env.init();
             })
             .then(() => {
@@ -98,11 +102,37 @@ class EnvironmentManager {
             });
     }
 
+    /**
+     * @param {object} data
+     * @param {string} data.id
+     */
+    getEnvironment(data) {
+        return this.idMap[data.id];
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.id
+     */
+    closeEnvironment(data) {
+        const env = this.idMap[data.id];
+        if (!env) throw new Error(`Environment with the specified ID does not exist: "${data.id}".`);
+
+        const s = env.getSummary();
+        delete this.idMap[s.id];
+        delete this.slugMap[s.slug];
+        delete this.pathMap[s.path];
+
+        env.close();
+        this._broadcastSummariesUpdate();
+    }
+
     _broadcastSummariesUpdate() {
         const envSummaries = this.getSummaries();
         this.emitter.emit(BackendEvents.UpdateEnvSummaries, envSummaries);
     }
 
+    /** @returns {EnvSummary[]} */
     getSummaries() {
         const envs = Object.values(this.idMap);
         const summaries = new Array(envs.length);
@@ -120,9 +150,7 @@ class EnvironmentManager {
         return id;
     }
 
-    /**
-     * @param {string} baseName
-     */
+    /** @param {string} baseName */
     getNewSlug(baseName) {
         let base_slug = baseName.trim().toLowerCase();
         base_slug = base_slug.replace(/[^a-z0-9\-]/g, '-');

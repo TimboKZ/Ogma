@@ -17,6 +17,8 @@ const Config = require('./helpers/Config');
 const Server = require('./helpers/Server');
 const EnvironmentManager = require('./helpers/EnvironmentManager');
 
+const logger = Util.getLogger();
+
 class OgmaCore {
 
     /**
@@ -31,15 +33,13 @@ class OgmaCore {
         this.ogmaHomePath = path.join(os.homedir(), '.ogma');
         this.ogmaConfigPath = path.join(this.ogmaHomePath, 'ogmarc.json');
 
-        const emitter = new EventEmitter2({
-            wildcard: true,
-            newListener: false,
-            maxListeners: 20,
-            verboseMemoryLeak: true,
-        });
+        this.emitter = new EventEmitter2({wildcard: true, newListener: false, maxListeners: 20});
+        const emitter = this.emitter;
+        const ogmaCore = this;
+
         this.config = new Config({emitter, configPath: this.ogmaConfigPath});
-        this.envManager = new EnvironmentManager({emitter, config: this.config});
-        this.server = new Server({emitter, port: this.port, envManager: this.envManager});
+        this.envManager = new EnvironmentManager({ogmaCore});
+        this.server = new Server({ogmaCore, port: this.port});
 
         this.mainWindow = null;
     }
@@ -55,16 +55,17 @@ class OgmaCore {
     }
 
     setupElectronApp() {
+        if (app.isReady()) this.createWindow();
         app.on('ready', () => {
             // TODO: uncomment below before packaging
-            // this.createWindow();
+            this.createWindow();
         });
         app.on('window-all-closed', () => {
             // On macOS it is common for applications and their menu bar
             // to stay active until the user quits explicitly with Cmd + Q
 
             // TODO: Let users quit via systray
-            // if (process.platform !== 'darwin') app.quit();
+            if (process.platform !== 'darwin') app.quit();
         });
         app.on('activate', () => {
             // On macOS it's common to re-create a window in the app when the
@@ -84,6 +85,9 @@ class OgmaCore {
             width: mainWindowState.width,
             height: mainWindowState.height,
             icon: path.join(Util.getStaticPath(), 'ogma-icon-128.png'),
+            webPreferences: {
+                sandbox: true,
+            },
         });
         mainWindowState.manage(this.mainWindow);
 

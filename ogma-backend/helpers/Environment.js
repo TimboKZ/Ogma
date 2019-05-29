@@ -4,12 +4,13 @@
  * @license GPL-3.0
  */
 
+const _ = require('lodash');
 const path = require('path');
 const fs = require('fs-extra');
 const Database = require('better-sqlite3');
 
 const Util = require('./Util');
-const {EnvProperty} = require('../typedef');
+const {BackendEvents, EnvProperty, Colors} = require('../../shared/typedef');
 
 const logger = Util.getLogger();
 
@@ -17,11 +18,14 @@ class Environment {
 
     /**
      * @param {object} data
+     * @param {OgmaCore} data.ogmaCore
      * @param {AbsPath} data.path Absolute path to the environment, can be OS specific
      * @param {EnvironmentManager} data.envManager
      * @param {boolean} [data.allowCreate]
      */
     constructor(data) {
+        this.ogmaCore = data.ogmaCore;
+        this.emitter = this.ogmaCore.emitter;
         this.path = data.path;
         this.envManager = data.envManager;
         this.allowCreate = !!data.allowCreate;
@@ -81,14 +85,35 @@ class Environment {
         this.id = getEnvProperty(EnvProperty.id, () => this.envManager.getNewId());
         this.slug = getEnvProperty(EnvProperty.slug, () => this.envManager.getNewSlug(this.dirName));
         this.name = getEnvProperty(EnvProperty.name, () => this.dirName);
-        this.icon = getEnvProperty(EnvProperty.icon, () => 'folder-open');
-        this.colour = getEnvProperty(EnvProperty.colour, () => '#4d2060');
+        this.icon = getEnvProperty(EnvProperty.icon, () => 'box-open');
+        this.color = getEnvProperty(EnvProperty.color, () => _.sample(Colors));
+    }
+
+    setProperty(data) {
+        delete data[EnvProperty.id];
+        delete data[EnvProperty.path];
+
+        for (const key of Object.keys(data)) {
+            if (!EnvProperty[key]) return;
+            const value = data[key];
+            this.set(key, value);
+            this[key] = value;
+        }
+
+        this.emitter.emit(BackendEvents.UpdateEnvSummary, this.getSummary());
+    }
+
+    close() {
+        this.db.close();
     }
 
     getPath() {
         return this.path;
     }
 
+    /**
+     * @returns {EnvSummary}
+     */
     getSummary() {
         return {
             id: this.id,
@@ -96,7 +121,7 @@ class Environment {
             path: this.path,
             name: this.name,
             icon: this.icon,
-            colour: this.colour,
+            color: this.color,
         };
     }
 
