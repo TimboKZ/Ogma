@@ -1,15 +1,38 @@
 # Ogma
 Tagging system for large file collections.
 
-### Notes
+# Building & running
 
-If you're having trouble getting `better-sqlite3` to compile on Windows, try running this as an  administrator:
+### Cloning
+
+Note that `ogma-frontend/` directory points to [a separate Git repository](https://github.com/TimboKZ/ogma-frontend).
+This means this repository has to be cloned with submodules:
 ```bash
-npm install --global --production windows-build-tools --vs2015
-npm install -g --production windows-build-tools
-node_modules/.bin/electron-rebuild -f -w better-sqlite3
+git clone --recursive https://github.com/TimboKZ/Ogma.git
+
+# OR if you already cloned the repo:
+git clone https://github.com/TimboKZ/Ogma.git
+cd Ogma
+git submodule init
+git submodule update --recursive
 ```
 
-If you're having issues with Babel complaining about missing `core-js/library/fn/get-iterator`, try downloading 
-`core-js` v2.5.7 from [here](https://github.com/zloirock/core-js/tree/v2.5.7) and unzipping it into 
-`node_modules/core-js`.
+### Running in development mode
+
+First, start the webpack development server for the frontend:
+
+```bash
+cd ogma-frontend/
+npm start
+```
+
+The webpack server will startup and open the webapp in your browser. The webapp will report some errors - this is
+expected, as the backend server is not running yet.
+
+Next, start the Electron app which will run the backend server in the background:
+```
+cd .. # Go back to repository root
+npm start
+```
+
+Once the Electron app starts up, you can reload your browser window and the web app should work as intended.
