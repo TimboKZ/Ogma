@@ -5,6 +5,7 @@
  */
 
 const path = require('path');
+const shortid = require('shortid');
 
 const Logger = require('./Logger');
 
@@ -24,6 +25,10 @@ class Util {
 
     static getStaticPath() {
         return staticPath;
+    }
+
+    static getId() {
+        return shortid.generate();
     }
 
     static isDevelopment() {

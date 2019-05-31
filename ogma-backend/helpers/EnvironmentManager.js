@@ -4,8 +4,6 @@
  * @license GPL-3.0
  */
 
-const _ = require('lodash');
-const shortid = require('shortid');
 const Promise = require('bluebird');
 const {dialog} = require('electron');
 
@@ -105,9 +103,16 @@ class EnvironmentManager {
     /**
      * @param {object} data
      * @param {string} data.id
+     * @param {boolean} [data.suppressError]
      */
     getEnvironment(data) {
-        return this.idMap[data.id];
+        const env = this.idMap[data.id];
+
+        if (!env && !data.suppressError) {
+            throw new Error(`Environment with ID "${data.id}" does not exist!`);
+        }
+
+        return env;
     }
 
     /**
@@ -143,9 +148,9 @@ class EnvironmentManager {
     }
 
     getNewId() {
-        let id = shortid.generate();
+        let id = Util.getId();
         while (this.idMap[id]) {
-            id = shortid.generate();
+            id = Util.getId();
         }
         return id;
     }

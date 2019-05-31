@@ -7,10 +7,12 @@
 const _ = require('lodash');
 const path = require('path');
 const fs = require('fs-extra');
+const Promise = require('bluebird');
+const {shell} = require('electron');
 const Database = require('better-sqlite3');
 
 const Util = require('./Util');
-const {BackendEvents, EnvProperty, Colors} = require('../../shared/typedef');
+const {OgmaEnvFolder, BackendEvents, EnvProperty, Colors} = require('../../shared/typedef');
 
 const logger = Util.getLogger();
 
@@ -31,7 +33,7 @@ class Environment {
         this.allowCreate = !!data.allowCreate;
 
         this.dirName = path.basename(this.path);
-        this.confDirPath = path.join(this.path, '.ogma-env');
+        this.confDirPath = path.join(this.path, OgmaEnvFolder);
         this.dbPath = path.join(this.confDirPath, 'data.sqlite');
     }
 
@@ -47,10 +49,10 @@ class Environment {
         }
         if (!confDirExists) fs.ensureDirSync(this.confDirPath);
 
-        this.prepareDb();
+        this._prepareDb();
     }
 
-    prepareDb() {
+    _prepareDb() {
         this.db = new Database(this.dbPath);
 
         // Create tables for all necessary data
@@ -107,10 +109,6 @@ class Environment {
         this.db.close();
     }
 
-    getPath() {
-        return this.path;
-    }
-
     /**
      * @returns {EnvSummary}
      */
@@ -123,6 +121,54 @@ class Environment {
             icon: this.icon,
             color: this.color,
         };
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.path Path relative to environment root
+     */
+    getDirectoryContents(data) {
+        const fullPath = path.join(this.path, data.path);
+        const normPath = path.normalize(fullPath);
+        if (normPath !== fullPath) throw new Error(`Directory path "${data.path}" is invalid!`);
+
+        return fs.readdir(normPath)
+            .then(fileNames => {
+                if (data.path === '/') _.remove(fileNames, f => f === OgmaEnvFolder);
+
+                const filePromises = new Array(fileNames.length);
+                for (let i = 0; i < fileNames.length; ++i) {
+                    const name = fileNames[i];
+                    const filePath = path.join(normPath, name);
+                    filePromises[i] = Promise.resolve()
+                        .then(() => fs.lstat(filePath))
+                        .then(stats => {
+                            const data = path.parse(name);
+                            const isDirectory = stats.isDirectory();
+
+                            return {
+                                id: Util.getId(),
+                                name: isDirectory ? data.base : data.name,
+                                base: data.base,
+                                ext: isDirectory ? '' : data.ext,
+                                isDirectory,
+                            };
+                        });
+                }
+
+                return Promise.all(filePromises);
+            });
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.path Path relative to environment root
+     */
+    openFile(data) {
+        const fullPath = path.join(this.path, data.path);
+        const normPath = path.normalize(fullPath);
+        if (normPath !== fullPath) throw new Error(`File path "${data.path}" is invalid!`);
+        shell.openItem(normPath);
     }
 
 }

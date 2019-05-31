@@ -94,6 +94,7 @@ class IpcModule {
         }
     }
 
+    // noinspection JSUnusedGlobalSymbols,JSMethodCanBeStatic
     /**
      * @param {object} [data]
      * @param {object} [socket]
@@ -104,6 +105,7 @@ class IpcModule {
         return {localClient: true};
     }
 
+    // noinspection JSUnusedGlobalSymbols
     /**
      * @returns {Promise<EnvSummary[]>}
      */
@@ -112,6 +114,7 @@ class IpcModule {
         return this.envManager.getSummaries();
     }
 
+    // noinspection JSUnusedGlobalSymbols
     /**
      * @param {object} data
      * @param {string} data.id
@@ -124,10 +127,12 @@ class IpcModule {
         return this.envManager.getEnvironment({id: data.id}).setProperty(data);
     }
 
+    // noinspection JSUnusedGlobalSymbols
     createEnvironment() {
         return this.envManager.createEnvironment();
     }
 
+    // noinspection JSUnusedGlobalSymbols
     /**
      * @param {object} data
      * @param {string} data.id
@@ -136,6 +141,26 @@ class IpcModule {
         return this.envManager.closeEnvironment(data);
     }
 
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string} data.path Relative path of the directory (from environment root)
+     */
+    getEnvDirectoryContents(data) {
+        return this.envManager.getEnvironment(data).getDirectoryContents(data);
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string} data.path Relative path of the file (from environment root)
+     */
+    openEnvFile(data) {
+        return this.envManager.getEnvironment(data).openFile(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols,JSMethodCanBeStatic
     /**
      * @param {object} data
      * @param {string} data.link

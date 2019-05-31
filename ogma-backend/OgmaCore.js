@@ -55,10 +55,10 @@ class OgmaCore {
     }
 
     setupElectronApp() {
-        if (app.isReady()) this.createWindow();
+        // if (app.isReady()) this.createWindow();
         app.on('ready', () => {
             // TODO: uncomment below before packaging
-            this.createWindow();
+            // this.createWindow();
         });
         app.on('window-all-closed', () => {
             // On macOS it is common for applications and their menu bar
