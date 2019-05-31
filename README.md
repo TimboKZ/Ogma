@@ -1,6 +1,8 @@
 # Ogma
 Tagging system for large file collections.
 
+![Ogma tagging system](./Ogma_screenshot.jpg)
+
 # Building & running
 
 ### Cloning
