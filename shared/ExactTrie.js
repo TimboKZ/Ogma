@@ -32,7 +32,7 @@ class ExactTrie {
                 curr = curr[char];
             }
         } else {
-            for (let i = 0; i < key.length; --i) {
+            for (let i = 0; i < key.length; ++i) {
                 const char = key.charAt(i);
                 if (!curr[char]) curr[char] = {};
                 curr = curr[char];
@@ -100,7 +100,7 @@ class ExactTrie {
                 curr = next;
             }
         } else {
-            for (let i = 0; i < key.length; i++) {
+            for (let i = 0; i < key.length; ++i) {
                 const char = key.charAt(i);
                 let next = curr[char];
                 if (!next) break;
