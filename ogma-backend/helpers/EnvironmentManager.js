@@ -55,13 +55,13 @@ class EnvironmentManager {
     createEnvironment(data = {}) {
         let envPath = data.path;
         if (!envPath) {
-            envPath = dialog.showOpenDialog({
+            const choices = dialog.showOpenDialog({
                 title: 'Choose a root folder for the collection',
                 properties: ['openDirectory', 'showHiddenFiles', 'createDirectory', 'noResolveAliases'],
-            })[0];
+            });
+            if (!choices || choices.length === 0) return Promise.resolve(null);
+            envPath = choices[0];
         }
-
-        if (!envPath) return Promise.resolve(null);
 
         return this.openEnvironment({path: envPath, allowCreate: true});
     }
@@ -102,16 +102,22 @@ class EnvironmentManager {
 
     /**
      * @param {object} data
-     * @param {string} data.id
+     * @param {string} [data.id]
+     * @param {string} [data.slug]
      * @param {boolean} [data.suppressError]
+     * @returns {Environment}
      */
     getEnvironment(data) {
-        const env = this.idMap[data.id];
-
-        if (!env && !data.suppressError) {
-            throw new Error(`Environment with ID "${data.id}" does not exist!`);
+        let env;
+        if (data.id) {
+            env = this.idMap[data.id];
+            if (!env && !data.suppressError) throw new Error(`Environment with ID "${data.id}" does not exist!`);
+        } else if (data.slug) {
+            env = this.slugMap[data.slug];
+            if (!env && !data.suppressError) throw new Error(`Environment with slug "${data.slug}" does not exist!`);
+        } else {
+            throw new Error(`getEnvironment() was called with specifiny and ID or a slug!`);
         }
-
         return env;
     }
 

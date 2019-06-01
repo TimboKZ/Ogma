@@ -7,11 +7,13 @@
 const _ = require('lodash');
 const path = require('path');
 const fs = require('fs-extra');
+const upath = require('upath');
 const Promise = require('bluebird');
 const {shell} = require('electron');
 const Database = require('better-sqlite3');
 
 const Util = require('./Util');
+const ThumbnailManager = require('./ThumbnailManager');
 const {OgmaEnvFolder, BackendEvents, EnvProperty, Colors} = require('../../shared/typedef');
 
 const logger = Util.getLogger();
@@ -33,8 +35,12 @@ class Environment {
         this.allowCreate = !!data.allowCreate;
 
         this.dirName = path.basename(this.path);
-        this.confDirPath = path.join(this.path, OgmaEnvFolder);
-        this.dbPath = path.join(this.confDirPath, 'data.sqlite');
+        this.confDir = path.join(this.path, OgmaEnvFolder);
+        this.dbPath = path.join(this.confDir, 'data.sqlite3');
+
+        this.thumbsDir = path.join(this.confDir, 'thumbnails');
+        const thumbsDbPath = path.join(this.confDir, 'thumbs.sqlite3');
+        this.thumbManager = new ThumbnailManager({thumbsDir: this.thumbsDir, thumbsDbPath, basePath: this.path});
     }
 
     init() {
@@ -42,14 +48,15 @@ class Environment {
             throw new Error(`Specified directory does not exist! Path: ${data.path}`);
         }
 
-        const confDirExists = fs.pathExistsSync(this.confDirPath);
+        const confDirExists = fs.pathExistsSync(this.confDir);
         const dbExists = fs.pathExistsSync(this.dbPath);
         if ((!confDirExists || !dbExists) && !this.allowCreate) {
             throw new Error(`Specified directory is not a valid Ogma environment! Path: ${this.path}`);
         }
-        if (!confDirExists) fs.ensureDirSync(this.confDirPath);
+        if (!confDirExists) fs.ensureDirSync(this.confDir);
 
         this._prepareDb();
+        this.thumbManager.init();
     }
 
     _prepareDb() {
@@ -59,11 +66,11 @@ class Environment {
         this.db.exec('CREATE TABLE IF NOT EXISTS properties (name TEXT PRIMARY KEY, value TEXT)');
         this.db.exec('CREATE TABLE IF NOT EXISTS entities (entity_id TEXT PRIMARY KEY, file_path TEXT UNIQUE)');
         this.db.exec(`CREATE TABLE IF NOT EXISTS tags
-                 (
-                   tag_id     TEXT PRIMARY KEY,
-                   name       TEXT,
-                   colour     TEXT
-                 )`);
+                      (
+                          tag_id TEXT PRIMARY KEY,
+                          name   TEXT,
+                          colour TEXT
+                      )`);
 
         // Setup get and set commands
         const set = this.db.prepare('REPLACE INTO properties VALUES (?, ?)');
@@ -128,30 +135,34 @@ class Environment {
      * @param {string} data.path Path relative to environment root
      */
     getDirectoryContents(data) {
-        const fullPath = path.join(this.path, data.path);
-        const normPath = path.normalize(fullPath);
-        if (normPath !== fullPath) throw new Error(`Directory path "${data.path}" is invalid!`);
+        const relDirPath = path.normalize(path.join(path.sep, data.path));
+        const nixDirPath = upath.toUnix(relDirPath);
+        const fullDirPath = path.join(this.path, relDirPath);
 
-        return fs.readdir(normPath)
+        return fs.readdir(fullDirPath)
             .then(fileNames => {
-                if (data.path === '/') _.remove(fileNames, f => f === OgmaEnvFolder);
+                _.remove(fileNames, f => f === OgmaEnvFolder);
 
                 const filePromises = new Array(fileNames.length);
                 for (let i = 0; i < fileNames.length; ++i) {
                     const name = fileNames[i];
-                    const filePath = path.join(normPath, name);
+                    const filePath = path.join(fullDirPath, name);
                     filePromises[i] = Promise.resolve()
                         .then(() => fs.lstat(filePath))
                         .then(stats => {
                             const data = path.parse(name);
                             const isDirectory = stats.isDirectory();
 
+                            const nixPath = upath.join(nixDirPath, name);
+                            const hash = Util.getMd5(nixPath);
+
                             return {
-                                id: Util.getId(),
-                                name: isDirectory ? data.base : data.name,
+                                hash,
+                                nixPath,
+                                isDirectory,
                                 base: data.base,
                                 ext: isDirectory ? '' : data.ext,
-                                isDirectory,
+                                name: isDirectory ? data.base : data.name,
                             };
                         });
                 }
@@ -169,6 +180,19 @@ class Environment {
         const normPath = path.normalize(fullPath);
         if (normPath !== fullPath) throw new Error(`File path "${data.path}" is invalid!`);
         shell.openItem(normPath);
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.path Path relative to environment root
+     */
+    getThumbnail(data) {
+        const normPath = path.normalize(path.join(path.sep, data.path));
+        return this.thumbManager.getOrCreateThumbnail({path: normPath});
+    }
+
+    getThumbsDir() {
+        return this.thumbsDir;
     }
 
 }

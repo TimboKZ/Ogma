@@ -25,15 +25,35 @@ class Server {
         this.port = data.port;
 
         this.ogmaCore = data.ogmaCore;
+        this.envManager = data.ogmaCore.envManager;
     }
 
     init() {
         this.expressApp = express();
-        this.expressApp.use(cors());
+        if (Util.isDevelopment()) this.expressApp.use(cors());
 
         this.httpServer = http.Server(this.expressApp);
         this.socketIO = socketIO(this.httpServer);
         this.ipcModule = new IpcModule({socket: this.socketIO, logger, ogmaCore: this.ogmaCore});
+
+        this.expressApp.get('/static/env/:slug/thumbs/*', (req, res) => {
+            const slug = req.params.slug;
+            const filePath = req.params[0];
+
+            const env = this.envManager.getEnvironment({slug});
+            if (!env) {
+                res.status(404);
+                return res.send(`Environment with slug "${slug}" does not exist.`);
+            }
+
+            if (!filePath) {
+                res.status(400);
+                return res.send('You need to specify a file.');
+            }
+
+            res.sendFile(filePath, {root: env.getThumbsDir()});
+        });
+        this.expressApp.use('/', express.static(Util.getStaticPath()));
     }
 
     start() {
@@ -43,6 +63,15 @@ class Server {
                 resolve();
             });
         });
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.uri
+     * @param {string} data.path Absolute path to folder that we want to serve
+     */
+    addStaticPath(data) {
+        this.expressApp.use(data.uri, express.static(data.path));
     }
 
 }

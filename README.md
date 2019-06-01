@@ -1,4 +1,4 @@
-# Ogma
+# 👁️ Ogma
 Tagging system for large file collections.
 
 ![Ogma tagging system](./Ogma_screenshot.jpg)
@@ -21,7 +21,12 @@ git submodule update --recursive
 
 ### Running in development mode
 
-First, start the webpack development server for the frontend:
+First, make sure all of the native dependencies are rebuilt for the correct Electron version by running:
+```bash
+npm run postinstall
+```
+
+Then start the webpack development server for the frontend:
 
 ```bash
 cd ogma-frontend/

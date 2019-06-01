@@ -34,9 +34,9 @@
   },
   "homepage": "https://github.com/TimboKZ/Ogma#readme",
   "devDependencies": {
-    "@babel/preset-react": "^7.0.0",
     "@types/better-sqlite3": "^5.4.0",
     "@types/bluebird": "^3.5.27",
+    "@types/express": "^4.16.1",
     "@types/fs-extra": "^7.0.0",
     "@types/lodash": "^4.14.132",
     "@types/node": "^8.10.48",
@@ -51,12 +51,17 @@
     "cors": "^2.8.5",
     "electron-window-state": "^5.0.3",
     "eventemitter2": "^5.0.1",
+    "exact-trie": "^1.0.1",
     "express": "^4.17.0",
     "fs-extra": "^8.0.1",
+    "fs-thumbnail": "^1.0.5",
     "hamt": "^2.2.2",
     "lodash": "^4.17.11",
+    "sharp": "^0.22.1",
     "shortid": "^2.2.14",
     "socket.io": "^2.2.0",
-    "trie-search": "^1.2.9"
+    "trash": "^6.0.0",
+    "trie-search": "^1.2.9",
+    "upath": "^1.1.2"
   }
 }

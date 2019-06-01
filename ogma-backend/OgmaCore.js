@@ -27,6 +27,8 @@ class OgmaCore {
      * @param {number} data.port
      */
     constructor(data) {
+        logger.info(`Running Node version ${process.version}.`);
+
         this.host = data.host;
         this.port = data.port;
 

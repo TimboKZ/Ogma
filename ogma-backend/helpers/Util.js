@@ -5,6 +5,7 @@
  */
 
 const path = require('path');
+const crypto = require('crypto');
 const shortid = require('shortid');
 
 const Logger = require('./Logger');
@@ -31,8 +32,22 @@ class Util {
         return shortid.generate();
     }
 
+    static getMd5(string) {
+        return crypto.createHash('md5').update(string).digest('hex');
+    }
+
     static isDevelopment() {
         return process.env.NODE_ENV !== 'production';
+    }
+
+    static prepSqlGet(db, statement) {
+        const stmt = db.prepare(statement);
+        return stmt.get.bind(stmt);
+    }
+
+    static prepSqlRun(db, statement) {
+        const stmt = db.prepare(statement);
+        return stmt.run.bind(stmt);
     }
 
 }

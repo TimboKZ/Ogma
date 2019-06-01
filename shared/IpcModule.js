@@ -5,8 +5,10 @@
  */
 
 const _ = require('lodash');
+const chalk = require('chalk');
 const Promise = require('bluebird');
 
+const SharedUtil = require('./SharedUtil');
 const {ForwardedEventsMap} = require('./typedef');
 
 const isServer = typeof window === 'undefined';
@@ -62,16 +64,29 @@ class IpcModule {
             this.logger.info(`New connection: ${connId} from ${remoteAddress}`);
 
             socket.on('ipc-call', (data, callback) => {
-                this.logger.debug(`Processing IPC method "${data.name}" from "${connId}" with data:`, data.data);
 
                 Promise.resolve()
                     .then(() => this[data.name](data.data, socket))
-                    .then(result => callback({result}))
+                    .then(result => {
+                        // Trigger the callback
+                        callback({result});
+
+                        // Print connection information
+                        const connSummary = `[IPC request] ${connId} -> ${chalk.cyan(data.name)}`;
+                        const resultString = `${chalk.magenta('result')}: ${SharedUtil.toHumanReadableType(result)}`;
+                        if (data.data) {
+                            const dataString = `${chalk.magenta('data')}: ${JSON.stringify(data.data)}`;
+                            this.logger.debug(`${connSummary}, ${dataString}, ${resultString}`);
+                        } else {
+                            this.logger.debug(`${connSummary}, ${resultString}`);
+                        }
+
+                    })
                     .catch(error => {
                         callback({error: error.message});
                         this.logger.error('An error occurred while processing socket action:', {
-                            name,
-                            data,
+                            name: data.name,
+                            data: data.data,
                         }, '\n', error);
                     });
             });
@@ -151,6 +166,7 @@ class IpcModule {
         return this.envManager.getEnvironment(data).getDirectoryContents(data);
     }
 
+    // noinspection JSUnusedGlobalSymbols
     /**
      * @param {object} data
      * @param {string} data.id Environment ID
@@ -158,6 +174,16 @@ class IpcModule {
      */
     openEnvFile(data) {
         return this.envManager.getEnvironment(data).openFile(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string} data.path Relative path of the file (from environment root)
+     */
+    getEnvFileThumbnail(data) {
+        return this.envManager.getEnvironment(data).getThumbnail(data);
     }
 
     // noinspection JSUnusedGlobalSymbols,JSMethodCanBeStatic
