@@ -8,10 +8,16 @@ const path = require('path');
 const fs = require('fs-extra');
 const upath = require('upath');
 const Promise = require('bluebird');
+const ExactTrie = require('exact-trie');
 const Database = require('better-sqlite3');
 const ThumbnailGenerator = require('fs-thumbnail');
 
 const Util = require('./Util');
+const {VideoExtensions, ImageExtensions} = require('../../shared/typedef');
+
+const thumbExtsTrie = new ExactTrie();
+for (const ext of VideoExtensions) thumbExtsTrie.put(ext, true, true);
+for (const ext of ImageExtensions) thumbExtsTrie.put(ext, true, true);
 
 const logger = Util.getLogger();
 
@@ -54,7 +60,51 @@ class ThumbManager {
      * @param {string} data.path Path relative to environment root, can be OS specific.
      * @returns {Promise.<string|null>}
      */
+    canHaveThumbnail(data) {
+        return thumbExtsTrie.hasWithCheckpoints(data.path, '.', true);
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.hash File hash.
+     * @param {Stats} data.stats File stats retrieved using `fs.stat()`.
+     * @returns {boolean}
+     */
+    checkThumbnailSync(data) {
+        const {hash, stats} = data;
+        const thumbData = this.selectThumbByHash(hash);
+
+        // Check if thumbnail was previously generated
+        if (!thumbData) return false;
+
+        // Check if thumbnail exists only in the database
+        const thumbName = `${hash}.jpg`;
+        const thumbPath = path.join(this.thumbsDir, thumbName);
+        if (!fs.pathExistsSync(thumbPath)) {
+            this.deleteThumbByHash(hash);
+            return false;
+        }
+
+        // Check if thumbnail is outdated
+        if (stats) {
+            const fileEpoch = stats.mtimeMs / 1000;
+            if (fileEpoch > thumbData.epoch) {
+                return false;
+            }
+        }
+
+        // Return thumb name if everything is ok
+        return true;
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.path Path relative to environment root, can be OS specific.
+     * @returns {Promise.<string|null>}
+     */
     getOrCreateThumbnail(data) {
+        if (!this.canHaveThumbnail(data)) return Promise.resolve(null);
+
         const osPath = path.join(this.basePath, data.path);
         const nixPath = upath.toUnix(data.path);
         const hash = Util.getMd5(nixPath);
@@ -63,27 +113,7 @@ class ThumbManager {
         const thumbPath = path.join(this.thumbsDir, thumbName);
 
         return fs.stat(osPath)
-            .then(stats => {
-                const thumbData = this.selectThumbByHash(hash);
-
-                // Check if thumbnail was previously generated
-                if (!thumbData) return false;
-
-                // Check if thumbnail exists only in the database
-                if (!fs.pathExistsSync(thumbPath)) {
-                    this.deleteThumbByHash(hash);
-                    return false;
-                }
-
-                // Check if thumbnail is outdated
-                const fileEpoch = stats.mtimeMs / 1000;
-                if (fileEpoch > thumbData.epoch) {
-                    return false;
-                }
-
-                // Return thumb name if everything is ok
-                return true;
-            })
+            .then(stats => this.checkThumbnailSync({hash, stats}))
             .then(thumbExists => {
                 if (thumbExists) return thumbName;
 
@@ -99,6 +129,10 @@ class ThumbManager {
                         return thumbName;
                     });
             });
+    }
+
+    close() {
+        this.db.close();
     }
 
 }

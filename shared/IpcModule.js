@@ -172,7 +172,7 @@ class IpcModule {
      * @param {string} data.id Environment ID
      * @param {string} data.path Relative path of the file (from environment root)
      */
-    openEnvFile(data) {
+    openFile(data) {
         return this.envManager.getEnvironment(data).openFile(data);
     }
 
@@ -182,7 +182,17 @@ class IpcModule {
      * @param {string} data.id Environment ID
      * @param {string} data.path Relative path of the file (from environment root)
      */
-    getEnvFileThumbnail(data) {
+    openInExplorer(data) {
+        return this.envManager.getEnvironment(data).openInExplorer(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string} data.path Relative path of the file (from environment root)
+     */
+    getFileThumbnail(data) {
         return this.envManager.getEnvironment(data).getThumbnail(data);
     }
 

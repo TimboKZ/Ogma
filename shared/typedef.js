@@ -9,16 +9,13 @@
  * @property {string} ogmaBackendVersion
  * @property {string[]} openEnvironments
  */
-
 /**
  * @typedef {object} ConnectionDetails
  * @property {boolean} localClient
  */
-
 /**
  * @typedef {EventEmitter2} EventEmitter
  */
-
 /**
  * @typedef {string} AbsPath
  * @typedef {string} RelPath
@@ -26,12 +23,14 @@
  */
 
 const OgmaEnvFolder = '.ogma-env';
-
 /** @enum {string} BackendEvents */
 const BackendEvents = {
     UpdateEnvSummaries: 'update-env-summaries',
     UpdateEnvSummary: 'update-env-summary',
 };
+const eventsToForward = [BackendEvents.UpdateEnvSummaries, BackendEvents.UpdateEnvSummary];
+const ForwardedEventsMap = {};
+for (const eventName of eventsToForward) ForwardedEventsMap[eventName] = true;
 
 /**
  * @typedef {object} EnvSummary
@@ -42,7 +41,6 @@ const BackendEvents = {
  * @property {string} icon
  * @property {string} color
  */
-
 /** @enum {string} EnvProperty */
 const EnvProperty = {
     id: 'id',
@@ -60,7 +58,6 @@ const MutableEnvProperties = [
     EnvProperty.color,
 ];
 
-/** @enum {string} Colors */
 const Colors = [
     '#b71c1c',
     '#d32f2f',
@@ -103,7 +100,6 @@ const Colors = [
     '#525252',
     '#969696',
 ];
-
 const ColorsLight = [
     '#eee',
     '#d65c5c',
@@ -179,7 +175,6 @@ const ColorsLight = [
     '#d65c70',
     '#d65c66',
 ];
-
 const ColorsDark = [
     '#777',
     '#8f3d3d',
@@ -256,9 +251,160 @@ const ColorsDark = [
     '#8f3d44',
 ];
 
-const eventsToForward = [BackendEvents.UpdateEnvSummaries, BackendEvents.UpdateEnvSummary];
-const ForwardedEventsMap = {};
-for (const eventName of eventsToForward) ForwardedEventsMap[eventName] = true;
+const ThumbnailState = {
+    Impossible: 0,
+    Possible: 1,
+    Ready: 2,
+};
+const VideoExtensions = ['3g2',
+    '3gp',
+    '3gpp',
+    'asf',
+    'asx',
+    'avi',
+    'dvb',
+    'f4v',
+    'fli',
+    'flv',
+    'fvt',
+    'h261',
+    'h263',
+    'h264',
+    'jpgm',
+    'jpgv',
+    'jpm',
+    'm1v',
+    'm2v',
+    'm4u',
+    'm4v',
+    'mj2',
+    'mjp2',
+    'mk3d',
+    'mks',
+    'mkv',
+    'mng',
+    'mov',
+    'movie',
+    'mp4',
+    'mp4v',
+    'mpe',
+    'mpeg',
+    'mpg',
+    'mpg4',
+    'mxu',
+    'ogv',
+    'pyv',
+    'qt',
+    'smv',
+    'ts',
+    'uvh',
+    'uvm',
+    'uvp',
+    'uvs',
+    'uvu',
+    'uvv',
+    'uvvh',
+    'uvvm',
+    'uvvp',
+    'uvvs',
+    'uvvu',
+    'uvvv',
+    'viv',
+    'vob',
+    'webm',
+    'wm',
+    'wmv',
+    'wmx',
+    'wvx',
+];
+const ImageExtensions = ['3ds',
+    'apng',
+    'azv',
+    'bmp',
+    'bmp',
+    'btif',
+    'cgm',
+    'cmx',
+    'djv',
+    'djvu',
+    'drle',
+    'dwg',
+    'dxf',
+    'emf',
+    'exr',
+    'fbs',
+    'fh',
+    'fh4',
+    'fh5',
+    'fh7',
+    'fhc',
+    'fits',
+    'fpx',
+    'fst',
+    'g3',
+    'gif',
+    'heic',
+    'heics',
+    'heif',
+    'heifs',
+    'ico',
+    'ico',
+    'ief',
+    'jls',
+    'jng',
+    'jp2',
+    'jpe',
+    'jpeg',
+    'jpf',
+    'jpg',
+    'jpg2',
+    'jpm',
+    'jpx',
+    'jxr',
+    'ktx',
+    'mdi',
+    'mmr',
+    'npx',
+    'pbm',
+    'pct',
+    'pcx',
+    'pcx',
+    'pgm',
+    'pic',
+    'png',
+    'pnm',
+    'ppm',
+    'psd',
+    'pti',
+    'ras',
+    'rgb',
+    'rlc',
+    'sgi',
+    'sid',
+    'sub',
+    'svg',
+    'svgz',
+    't38',
+    'tap',
+    'tfx',
+    'tga',
+    'tif',
+    'tiff',
+    'uvg',
+    'uvi',
+    'uvvg',
+    'uvvi',
+    'vtf',
+    'wbmp',
+    'wdp',
+    'webp',
+    'wmf',
+    'xbm',
+    'xif',
+    'xpm',
+    'xwd',
+];
+
 
 module.exports = {
     OgmaEnvFolder,
@@ -269,4 +415,7 @@ module.exports = {
     Colors,
     ColorsLight,
     ColorsDark,
+    ThumbnailState,
+    VideoExtensions,
+    ImageExtensions,
 };

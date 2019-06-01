@@ -14,7 +14,7 @@ const Database = require('better-sqlite3');
 
 const Util = require('./Util');
 const ThumbnailManager = require('./ThumbnailManager');
-const {OgmaEnvFolder, BackendEvents, EnvProperty, Colors} = require('../../shared/typedef');
+const {OgmaEnvFolder, BackendEvents, EnvProperty, Colors, ThumbnailState} = require('../../shared/typedef');
 
 const logger = Util.getLogger();
 
@@ -61,32 +61,29 @@ class Environment {
 
     _prepareDb() {
         this.db = new Database(this.dbPath);
+        const db = this.db;
 
         // Create tables for all necessary data
-        this.db.exec('CREATE TABLE IF NOT EXISTS properties (name TEXT PRIMARY KEY, value TEXT)');
-        this.db.exec('CREATE TABLE IF NOT EXISTS entities (entity_id TEXT PRIMARY KEY, file_path TEXT UNIQUE)');
-        this.db.exec(`CREATE TABLE IF NOT EXISTS tags
-                      (
-                          tag_id TEXT PRIMARY KEY,
-                          name   TEXT,
-                          colour TEXT
-                      )`);
+        db.exec('CREATE TABLE IF NOT EXISTS properties (name TEXT PRIMARY KEY, value TEXT)');
+        db.exec('CREATE TABLE IF NOT EXISTS entities (entity_id TEXT PRIMARY KEY, file_path TEXT UNIQUE)');
+        db.exec(`CREATE TABLE IF NOT EXISTS tags
+                 (
+                     tag_id TEXT PRIMARY KEY,
+                     name   TEXT,
+                     colour TEXT
+                 )`);
+
 
         // Setup get and set commands
-        const set = this.db.prepare('REPLACE INTO properties VALUES (?, ?)');
-        const get = this.db.prepare('SELECT value FROM properties WHERE name = ?');
-        get.pluck(true);
-        /** @type {function(string, string)} */
-        this.set = (name, value) => set.run(name, value);
-        /** @type {function(string): string} */
-        this.get = name => get.get(name);
+        this.setProperty = Util.prepSqlRun(db, 'REPLACE INTO properties VALUES (?, ?)');
+        this.getProperty = Util.prepSqlGet(db, 'SELECT value FROM properties WHERE name = ?', true);
 
         // Load environment properties
         const getEnvProperty = (property, defaultValueFunc) => {
-            let value = this.get(property);
+            let value = this.getProperty(property);
             if (value === undefined || value === '') {
                 const defaultValue = defaultValueFunc();
-                this.set(property, defaultValue);
+                this.setProperty(property, defaultValue);
                 value = defaultValue;
             }
             return value;
@@ -105,15 +102,11 @@ class Environment {
         for (const key of Object.keys(data)) {
             if (!EnvProperty[key]) return;
             const value = data[key];
-            this.set(key, value);
+            this.setProperty(key, value);
             this[key] = value;
         }
 
         this.emitter.emit(BackendEvents.UpdateEnvSummary, this.getSummary());
-    }
-
-    close() {
-        this.db.close();
     }
 
     /**
@@ -156,13 +149,25 @@ class Environment {
                             const nixPath = upath.join(nixDirPath, name);
                             const hash = Util.getMd5(nixPath);
 
+                            let thumbState = ThumbnailState.Impossible;
+                            if (!isDirectory) {
+                                if (this.thumbManager.canHaveThumbnail({path: nixPath})) {
+                                    thumbState = ThumbnailState.Possible;
+                                    if (this.thumbManager.checkThumbnailSync({hash, stats})) {
+                                        thumbState = ThumbnailState.Ready;
+                                    }
+                                }
+                            }
+
                             return {
                                 hash,
                                 nixPath,
-                                isDirectory,
                                 base: data.base,
                                 ext: isDirectory ? '' : data.ext,
                                 name: isDirectory ? data.base : data.name,
+
+                                isDirectory,
+                                thumb: thumbState,
                             };
                         });
                 }
@@ -186,6 +191,17 @@ class Environment {
      * @param {object} data
      * @param {string} data.path Path relative to environment root
      */
+    openInExplorer(data) {
+        const fullPath = path.join(this.path, data.path);
+        const normPath = path.normalize(fullPath);
+        if (normPath !== fullPath) throw new Error(`File path "${data.path}" is invalid!`);
+        shell.showItemInFolder(normPath);
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.path Path relative to environment root
+     */
     getThumbnail(data) {
         const normPath = path.normalize(path.join(path.sep, data.path));
         return this.thumbManager.getOrCreateThumbnail({path: normPath});
@@ -193,6 +209,11 @@ class Environment {
 
     getThumbsDir() {
         return this.thumbsDir;
+    }
+
+    close() {
+        this.thumbManager.close();
+        this.db.close();
     }
 
 }

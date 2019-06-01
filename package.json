@@ -51,7 +51,7 @@
     "cors": "^2.8.5",
     "electron-window-state": "^5.0.3",
     "eventemitter2": "^5.0.1",
-    "exact-trie": "^1.0.1",
+    "exact-trie": "^1.0.2",
     "express": "^4.17.0",
     "fs-extra": "^8.0.1",
     "fs-thumbnail": "^1.0.5",

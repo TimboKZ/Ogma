@@ -40,8 +40,9 @@ class Util {
         return process.env.NODE_ENV !== 'production';
     }
 
-    static prepSqlGet(db, statement) {
+    static prepSqlGet(db, statement, pluck = false) {
         const stmt = db.prepare(statement);
+        if (pluck) stmt.pluck();
         return stmt.get.bind(stmt);
     }
 
