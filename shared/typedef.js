@@ -27,9 +27,13 @@ const OgmaEnvFolder = '.ogma-env';
 const BackendEvents = {
     UpdateEnvSummaries: 'update-env-summaries',
     UpdateEnvSummary: 'update-env-summary',
-    EnvRemoveFile: 'env-remove-file',
+    EnvRemoveFiles: 'env-remove-files',
 };
-const eventsToForward = [BackendEvents.UpdateEnvSummaries, BackendEvents.UpdateEnvSummary];
+const eventsToForward = [
+    BackendEvents.UpdateEnvSummaries,
+    BackendEvents.UpdateEnvSummary,
+    BackendEvents.EnvRemoveFiles,
+];
 const ForwardedEventsMap = {};
 for (const eventName of eventsToForward) ForwardedEventsMap[eventName] = true;
 
@@ -405,7 +409,62 @@ const ImageExtensions = ['3ds',
     'xpm',
     'xwd',
 ];
-
+const AudioExtensions = [
+    '3gpp',
+    'aac',
+    'adp',
+    'aif',
+    'aifc',
+    'aiff',
+    'au',
+    'caf',
+    'dra',
+    'dts',
+    'dtshd',
+    'ecelp4800',
+    'ecelp7470',
+    'ecelp9600',
+    'eol',
+    'flac',
+    'kar',
+    'lvp',
+    'm2a',
+    'm3a',
+    'm3u',
+    'm4a',
+    'm4a',
+    'mid',
+    'midi',
+    'mka',
+    'mp2',
+    'mp2a',
+    'mp3',
+    'mp3',
+    'mp4a',
+    'mpga',
+    'oga',
+    'ogg',
+    'pya',
+    'ra',
+    'ra',
+    'ram',
+    'rip',
+    'rmi',
+    'rmp',
+    's3m',
+    'sil',
+    'snd',
+    'spx',
+    'uva',
+    'uvva',
+    'wav',
+    'wav',
+    'wav',
+    'wax',
+    'weba',
+    'wma',
+    'xm',
+];
 
 module.exports = {
     OgmaEnvFolder,
@@ -419,4 +478,5 @@ module.exports = {
     ThumbnailState,
     VideoExtensions,
     ImageExtensions,
+    AudioExtensions,
 };

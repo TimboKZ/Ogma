@@ -67,6 +67,7 @@ class Environment {
         // Create tables for all necessary data
         db.exec('CREATE TABLE IF NOT EXISTS properties (name TEXT PRIMARY KEY, value TEXT)');
         db.exec('CREATE TABLE IF NOT EXISTS entities (entity_id TEXT PRIMARY KEY, file_path TEXT UNIQUE)');
+
         db.exec(`CREATE TABLE IF NOT EXISTS tags
                  (
                      tag_id TEXT PRIMARY KEY,
@@ -147,7 +148,7 @@ class Environment {
                             const isDir = stats.isDirectory();
 
                             const nixPath = upath.join(nixDirPath, name);
-                            const hash = Util.getMd5(nixPath);
+                            const hash = Util.getFileHash(nixPath);
 
                             let thumbState = ThumbnailState.Impossible;
                             if (!isDir) {
@@ -198,14 +199,19 @@ class Environment {
 
     /**
      * @param {object} data
-     * @param {string} data.path Path relative to environment root
+     * @param {string[]} data.paths Array of paths relative to environment root
      */
-    removeFile(data) {
-        const normPath = path.normalize(path.join(path.sep, data.path));
-        const fullPath = path.join(this.path, normPath);
-        return trash(fullPath)
+    removeFiles(data) {
+        const normPaths = _.map(data.paths, p => path.normalize(path.join(path.sep, p)));
+        const nixPaths = _.map(normPaths, p => upath.toUnix(p));
+        const fullPaths = _.map(normPaths, p => path.join(this.path, p));
+        return trash(fullPaths)
             .then(() => {
-                this.emitter.emit(BackendEvents.EnvRemoveFile, {id: this.id, path: upath.toUnix(normPath)});
+                const hashes = _.map(nixPaths, p => Util.getFileHash(p));
+                this.emitter.emit(BackendEvents.EnvRemoveFiles, {id: this.id, hashes, paths: nixPaths});
+
+                // TODO: Remove thumbnails from all children of a folder!
+                _.map(hashes, hash => this.thumbManager.removeThumbnail({hash}).catch(logger.error));
             });
     }
 

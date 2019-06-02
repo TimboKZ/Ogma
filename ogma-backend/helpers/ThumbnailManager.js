@@ -19,6 +19,7 @@ const thumbExtsTrie = new ExactTrie();
 for (const ext of VideoExtensions) thumbExtsTrie.put(ext, true, true);
 for (const ext of ImageExtensions) thumbExtsTrie.put(ext, true, true);
 
+// noinspection JSUnusedLocalSymbols
 const logger = Util.getLogger();
 
 class ThumbManager {
@@ -51,10 +52,12 @@ class ThumbManager {
                  )`);
         db.exec(`CREATE INDEX IF NOT EXISTS thumb_nix_path ON thumbnails (nixPath)`);
         this.insertThumb = Util.prepSqlRun(db, 'REPLACE INTO thumbnails VALUES(?, ?, ?)');
+        /** @type {function(string): {hash: string, nixPath: string, epoch: number}} */
         this.selectThumbByHash = Util.prepSqlGet(db, 'SELECT * FROM thumbnails WHERE hash = ?');
         this.deleteThumbByHash = Util.prepSqlRun(db, 'DELETE FROM thumbnails WHERE hash = ?');
     }
 
+    // noinspection JSMethodCanBeStatic
     /**
      * @param {object} data
      * @param {string} data.path Path relative to environment root, can be OS specific.
@@ -99,6 +102,23 @@ class ThumbManager {
 
     /**
      * @param {object} data
+     * @param {string} data.hash File hash.
+     */
+    removeThumbnail(data) {
+        const {hash} = data;
+
+        return Promise.resolve()
+            .then(() => {
+                this.deleteThumbByHash(hash);
+
+                const thumbName = `${hash}.jpg`;
+                const thumbPath = path.join(this.thumbsDir, thumbName);
+                return fs.pathExistsSync(thumbPath) ? fs.unlink(thumbPath) : null;
+            });
+    }
+
+    /**
+     * @param {object} data
      * @param {string} data.path Path relative to environment root, can be OS specific.
      * @returns {Promise.<string|null>}
      */
@@ -107,7 +127,7 @@ class ThumbManager {
 
         const osPath = path.join(this.basePath, data.path);
         const nixPath = upath.toUnix(data.path);
-        const hash = Util.getMd5(nixPath);
+        const hash = Util.getFileHash(nixPath);
 
         const thumbName = `${hash}.jpg`;
         const thumbPath = path.join(this.thumbsDir, thumbName);

@@ -190,10 +190,10 @@ class IpcModule {
     /**
      * @param {object} data
      * @param {string} data.id Environment ID
-     * @param {string} data.path Relative path of the file (from environment root)
+     * @param {string[]} data.paths Array of relative paths of the file (from environment root)
      */
-    removeFile(data) {
-        return this.envManager.getEnvironment(data).removeFile(data);
+    removeFiles(data) {
+        return this.envManager.getEnvironment(data).removeFiles(data);
     }
 
     // noinspection JSUnusedGlobalSymbols

@@ -32,8 +32,28 @@ class Util {
         return shortid.generate();
     }
 
+    /**
+     * @param {string} string
+     * @returns {string}
+     */
     static getMd5(string) {
         return crypto.createHash('md5').update(string).digest('hex');
+    }
+
+    /**
+     * @param {string} nixPath
+     * @returns {string}
+     */
+    static getFileHash(nixPath) {
+        return Util.getMd5(nixPath).substring(0, 12);
+    }
+
+    /**
+     * @param {string} name
+     * @returns {string}
+     */
+    static getTagHash(name) {
+        return Util.getMd5(name.toLowerCase()).substring(0, 10);
     }
 
     static isDevelopment() {
