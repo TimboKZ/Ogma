@@ -162,7 +162,7 @@ class IpcModule {
      * @param {string} data.id Environment ID
      * @param {string} data.path Relative path of the directory (from environment root)
      */
-    getEnvDirectoryContents(data) {
+    getDirectoryContents(data) {
         return this.envManager.getEnvironment(data).getDirectoryContents(data);
     }
 
@@ -184,6 +184,16 @@ class IpcModule {
      */
     openInExplorer(data) {
         return this.envManager.getEnvironment(data).openInExplorer(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string} data.path Relative path of the file (from environment root)
+     */
+    removeFile(data) {
+        return this.envManager.getEnvironment(data).removeFile(data);
     }
 
     // noinspection JSUnusedGlobalSymbols

@@ -7,6 +7,7 @@
 const _ = require('lodash');
 const path = require('path');
 const fs = require('fs-extra');
+const trash = require('trash');
 const upath = require('upath');
 const Promise = require('bluebird');
 const {shell} = require('electron');
@@ -73,17 +74,16 @@ class Environment {
                      colour TEXT
                  )`);
 
-
         // Setup get and set commands
-        this.setProperty = Util.prepSqlRun(db, 'REPLACE INTO properties VALUES (?, ?)');
-        this.getProperty = Util.prepSqlGet(db, 'SELECT value FROM properties WHERE name = ?', true);
+        this._setProperty = Util.prepSqlRun(db, 'REPLACE INTO properties VALUES (?, ?)');
+        this._getProperty = Util.prepSqlGet(db, 'SELECT value FROM properties WHERE name = ?', true);
 
         // Load environment properties
         const getEnvProperty = (property, defaultValueFunc) => {
-            let value = this.getProperty(property);
+            let value = this._getProperty(property);
             if (value === undefined || value === '') {
                 const defaultValue = defaultValueFunc();
-                this.setProperty(property, defaultValue);
+                this._setProperty(property, defaultValue);
                 value = defaultValue;
             }
             return value;
@@ -102,7 +102,7 @@ class Environment {
         for (const key of Object.keys(data)) {
             if (!EnvProperty[key]) return;
             const value = data[key];
-            this.setProperty(key, value);
+            this._setProperty(key, value);
             this[key] = value;
         }
 
@@ -144,13 +144,13 @@ class Environment {
                         .then(() => fs.lstat(filePath))
                         .then(stats => {
                             const data = path.parse(name);
-                            const isDirectory = stats.isDirectory();
+                            const isDir = stats.isDirectory();
 
                             const nixPath = upath.join(nixDirPath, name);
                             const hash = Util.getMd5(nixPath);
 
                             let thumbState = ThumbnailState.Impossible;
-                            if (!isDirectory) {
+                            if (!isDir) {
                                 if (this.thumbManager.canHaveThumbnail({path: nixPath})) {
                                     thumbState = ThumbnailState.Possible;
                                     if (this.thumbManager.checkThumbnailSync({hash, stats})) {
@@ -163,10 +163,10 @@ class Environment {
                                 hash,
                                 nixPath,
                                 base: data.base,
-                                ext: isDirectory ? '' : data.ext,
-                                name: isDirectory ? data.base : data.name,
+                                ext: isDir ? '' : data.ext,
+                                name: isDir ? data.base : data.name,
 
-                                isDirectory,
+                                isDir,
                                 thumb: thumbState,
                             };
                         });
@@ -181,10 +181,9 @@ class Environment {
      * @param {string} data.path Path relative to environment root
      */
     openFile(data) {
-        const fullPath = path.join(this.path, data.path);
-        const normPath = path.normalize(fullPath);
-        if (normPath !== fullPath) throw new Error(`File path "${data.path}" is invalid!`);
-        shell.openItem(normPath);
+        const normPath = path.normalize(path.join(path.sep, data.path));
+        const fullPath = path.join(this.path, normPath);
+        shell.openItem(fullPath);
     }
 
     /**
@@ -192,10 +191,22 @@ class Environment {
      * @param {string} data.path Path relative to environment root
      */
     openInExplorer(data) {
-        const fullPath = path.join(this.path, data.path);
-        const normPath = path.normalize(fullPath);
-        if (normPath !== fullPath) throw new Error(`File path "${data.path}" is invalid!`);
-        shell.showItemInFolder(normPath);
+        const normPath = path.normalize(path.join(path.sep, data.path));
+        const fullPath = path.join(this.path, normPath);
+        shell.showItemInFolder(fullPath);
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.path Path relative to environment root
+     */
+    removeFile(data) {
+        const normPath = path.normalize(path.join(path.sep, data.path));
+        const fullPath = path.join(this.path, normPath);
+        return trash(fullPath)
+            .then(() => {
+                this.emitter.emit(BackendEvents.EnvRemoveFile, {id: this.id, path: upath.toUnix(normPath)});
+            });
     }
 
     /**
