@@ -33,6 +33,9 @@ class IpcModule {
         this.socket = data.socket;
         this.logger = data.logger;
 
+        this.requestCount = 0;
+        this.timeout = 5000;
+
         this.serverMethods = Object.getOwnPropertyNames(IpcModule.prototype);
         this.serverMethods = _.filter(this.serverMethods, m => !(m.startsWith('_') || m === 'constructor'));
 
@@ -64,6 +67,9 @@ class IpcModule {
             this.logger.info(`New connection: ${connId} from ${remoteAddress}`);
 
             socket.on('ipc-call', (data, callback) => {
+                this.requestCount++;
+                const requestId = this.requestCount;
+                // TODO: Log request here.
 
                 Promise.resolve()
                     .then(() => this[data.name](data.data, socket))
@@ -100,8 +106,17 @@ class IpcModule {
         // Forward method calls to backend
         for (const methodName of this.serverMethods) {
             this[methodName] = methodData => new Promise((resolve, reject) => {
+
+                this.requestCount++;
+                const requestId = this.requestCount;
+                const prefix = `[IPC Req #${requestId}]`;
+                const timeout = setTimeout(() => {
+                    console.warn(`${prefix} ${methodName} timed out! Data:`, methodData);
+                }, this.timeout);
+
                 const data = {name: methodName, data: methodData};
                 this.socket.emit('ipc-call', data, response => {
+                    clearTimeout(timeout);
                     if (response.error) reject(this.errorHandler(response.error));
                     else resolve(response.result);
                 });

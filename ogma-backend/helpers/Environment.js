@@ -70,8 +70,8 @@ class Environment {
         db.exec('CREATE TABLE IF NOT EXISTS entities (id TEXT PRIMARY KEY, hash TEXT UNIQUE, filePath TEXT UNIQUE)');
         db.exec(`CREATE TABLE IF NOT EXISTS tags
                  (
-                     id  TEXT PRIMARY KEY,
-                     name   TEXT,
+                     id    TEXT PRIMARY KEY,
+                     name  TEXT,
                      color TEXT
                  )`);
         db.exec(`CREATE TABLE IF NOT EXISTS entity_tags
@@ -94,13 +94,16 @@ class Environment {
         this._insertTag = Util.prepSqlRun(db, 'INSERT INTO tags VALUES(?, ?, ?)');
         this._selectTagById = Util.prepSqlGet(db, 'SELECT * FROM tags WHERE id = ?');
         this._insertTagsIfNotExists = db.transaction((ids, names) => {
+            const newTags = [];
             for (let i = 0; i < ids.length; ++i) {
                 const id = ids[i];
                 if (this._selectTagById(id)) continue;
                 const name = names[i];
                 const color = _.sample(Colors);
                 this._insertTag(id, name, color);
+                newTags.push({id, name, color});
             }
+            return newTags;
         });
 
         this._setEntityTag = Util.prepSqlRun(db, 'REPLACE INTO entity_tags VALUES (?, ?)');
@@ -109,10 +112,12 @@ class Environment {
         });
         this._selectEntityIdsByTagId = Util.prepSqlAll(db, 'SELECT entityId FROM entity_tags WHERE tagId = ?', true);
         this._selectTagIdsByEntityId = Util.prepSqlAll(db, 'SELECT tagId FROM entity_tags WHERE entityId = ?', true);
-        this._selectTagIdsByFileHash = hash => {
+        this._selectEntityIdAndTagIdsByFileHash = hash => {
             const entityId = this._selectEntityIdByHash(hash);
-            if (!entityId) return [];
-            else return this._selectTagIdsByEntityId(entityId);
+            let tagIds;
+            if (!entityId) tagIds = [];
+            else tagIds = this._selectTagIdsByEntityId(entityId);
+            return {entityId, tagIds};
         };
 
         // Load environment properties
@@ -162,6 +167,7 @@ class Environment {
 
     /**
      * @param {object} data
+     * @param {string[]} [data.hashes] File hashes
      * @param {string[]} data.nixPaths Array of relative paths of the file (from environment root)
      */
     _getOrDefineEntityIDs(data) {
@@ -169,17 +175,15 @@ class Environment {
         const nixPaths = data.nixPaths;
         return Promise.resolve()
             .then(() => {
-                const hashes = _.map(nixPaths, p => Util.getFileHash(p));
+                const hashes = data.hashes || _.map(nixPaths, Util.getFileHash);
                 const entityIds = new Array(hashes.length);
                 for (let i = 0; i < hashes.length; ++i) {
                     const hash = hashes[i];
                     const nixPath = nixPaths[i];
-                    const entity = this._selectEntityIdByHash(hash);
-                    if (entity) {
-                        logger.debug(`Entity exists for ${nixPath}`);
-                        entityIds[i] = entity.id;
+                    const entityId = this._selectEntityIdByHash(hash);
+                    if (entityId) {
+                        entityIds[i] = entityId;
                     } else {
-                        logger.debug(`Entity does not exist ${nixPath}`);
                         const id = Util.getShortId();
                         this._insertEntity(id, hash, nixPath);
                         entityIds[i] = id;
@@ -203,7 +207,8 @@ class Environment {
             .then(() => {
                 const tagNames = _.map(data.tagNames, s => s.trim());
                 const tagIds = _.map(tagNames, n => Util.getTagId(n.toLowerCase()));
-                this._insertTagsIfNotExists(tagIds, tagNames);
+                const newTags = this._insertTagsIfNotExists(tagIds, tagNames);
+                this.emitter.emit(BackendEvents.EnvAddTags, {id: this.id, tags: newTags});
                 return tagIds;
             });
     }
@@ -217,14 +222,16 @@ class Environment {
         // TODO: Emit events that tags were assigned.
         const tagNames = data.tagNames;
         const nixPaths = _.map(data.paths, Util.getEnvNixPath);
+        const hashes = _.map(nixPaths, Util.getFileHash);
         const promises = [
-            this._getOrDefineEntityIDs({nixPaths}),
+            this._getOrDefineEntityIDs({hashes, nixPaths}),
             this._getOrDefineTagIDs({tagNames}),
         ];
         return Promise.all(promises)
             .then(result => {
                 const [entityIds, tagIds] = result;
                 this._setMultipleEntityTags(entityIds, tagIds);
+                this.emitter.emit(BackendEvents.EnvTagFiles, {id: this.id, entityIds, hashes, tagIds});
             });
     }
 
@@ -264,6 +271,8 @@ class Environment {
                                 }
                             }
 
+                            const {entityId, tagIds} = this._selectEntityIdAndTagIdsByFileHash(hash);
+
                             return {
                                 hash,
                                 nixPath,
@@ -272,8 +281,9 @@ class Environment {
                                 name: isDir ? data.base : data.name,
 
                                 isDir,
+                                tagIds,
+                                entityId,
                                 thumb: thumbState,
-                                tagIds: this._selectTagIdsByFileHash(hash),
                             };
                         });
                 }

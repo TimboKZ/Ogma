@@ -26,11 +26,17 @@ const OgmaEnvFolder = '.ogma-env';
 const BackendEvents = {
     UpdateEnvSummaries: 'update-env-summaries',
     UpdateEnvSummary: 'update-env-summary',
+
+    EnvAddTags: 'env-add-tags',
+    EnvTagFiles: 'env-tag-files',
     EnvRemoveFiles: 'env-remove-files',
 };
 const eventsToForward = [
     BackendEvents.UpdateEnvSummaries,
     BackendEvents.UpdateEnvSummary,
+
+    BackendEvents.EnvAddTags,
+    BackendEvents.EnvTagFiles,
     BackendEvents.EnvRemoveFiles,
 ];
 const ForwardedEventsMap = {};
