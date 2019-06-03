@@ -13,9 +13,8 @@
  * @typedef {object} ConnectionDetails
  * @property {boolean} localClient
  */
-/**
- * @typedef {EventEmitter2} EventEmitter
- */
+/** @typedef {EventEmitter2} EventEmitter */
+/** @typedef {BetterSqlite3.Database} Database */
 /**
  * @typedef {string} AbsPath
  * @typedef {string} RelPath

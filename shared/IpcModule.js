@@ -124,9 +124,18 @@ class IpcModule {
     /**
      * @returns {Promise<EnvSummary[]>}
      */
-    getEnvSummaries() {
+    getSummaries() {
         // noinspection JSValidateTypes
         return this.envManager.getSummaries();
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     */
+    getAllTags(data) {
+        return this.envManager.getEnvironment({id: data.id}).getAllTags();
     }
 
     // noinspection JSUnusedGlobalSymbols
@@ -213,6 +222,17 @@ class IpcModule {
      */
     openExternalLink(data) {
         electron.shell.openExternal(data.link);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string[]} data.tagNames Names of tags to add
+     * @param {string[]} data.paths Array of relative paths of the file (from environment root)
+     */
+    addTagsToFiles(data) {
+        return this.envManager.getEnvironment(data).addTagsToFiles(data);
     }
 }
 

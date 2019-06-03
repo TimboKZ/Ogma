@@ -154,9 +154,9 @@ class EnvironmentManager {
     }
 
     getNewId() {
-        let id = Util.getId();
+        let id = Util.getShortId();
         while (this.idMap[id]) {
-            id = Util.getId();
+            id = Util.getShortId();
         }
         return id;
     }
