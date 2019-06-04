@@ -249,6 +249,17 @@ class IpcModule {
     addTagsToFiles(data) {
         return this.envManager.getEnvironment(data).addTagsToFiles(data);
     }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string[]} data.tagIds IDs of tags to remove
+     * @param {string[]} data.entityIds Array of entity IDs from which to remove tags
+     */
+    removeTagsFromFiles(data) {
+        return this.envManager.getEnvironment(data).removeTagsFromFiles(data);
+    }
 }
 
 module.exports = IpcModule;

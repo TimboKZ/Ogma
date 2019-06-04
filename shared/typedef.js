@@ -29,6 +29,7 @@ const BackendEvents = {
 
     EnvAddTags: 'env-add-tags',
     EnvTagFiles: 'env-tag-files',
+    EnvUntagFiles: 'env-untag-files',
     EnvRemoveFiles: 'env-remove-files',
 };
 const eventsToForward = [
@@ -37,6 +38,7 @@ const eventsToForward = [
 
     BackendEvents.EnvAddTags,
     BackendEvents.EnvTagFiles,
+    BackendEvents.EnvUntagFiles,
     BackendEvents.EnvRemoveFiles,
 ];
 const ForwardedEventsMap = {};

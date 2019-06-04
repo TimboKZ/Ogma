@@ -105,7 +105,6 @@ class Environment {
             }
             return newTags;
         });
-
         this._setEntityTag = Util.prepSqlRun(db, 'REPLACE INTO entity_tags VALUES (?, ?)');
         this._setMultipleEntityTags = db.transaction((entityIds, tagIds) => {
             for (const entId of entityIds) for (const tagId of tagIds) this._setEntityTag(entId, tagId);
@@ -119,6 +118,10 @@ class Environment {
             else tagIds = this._selectTagIdsByEntityId(entityId);
             return {entityId, tagIds};
         };
+        this._deleteEntityTag = Util.prepSqlRun(db, 'DELETE FROM entity_tags WHERE entityId = ? AND tagId=  ?');
+        this._deleteMultipleEntityTags = db.transaction((entityIds, tagIds) => {
+            for (const entId of entityIds) for (const tagId of tagIds) this._deleteEntityTag(entId, tagId);
+        });
 
         // Load environment properties
         const getEnvProperty = (property, defaultValueFunc) => {
@@ -202,7 +205,6 @@ class Environment {
      * @param {string[]} data.tagNames
      */
     _getOrDefineTagIDs(data) {
-        // TODO: Emit events when new tags are created.
         return Promise.resolve()
             .then(() => {
                 const tagNames = _.map(data.tagNames, s => s.trim());
@@ -219,7 +221,6 @@ class Environment {
      * @param {string[]} data.paths Array of relative paths of the file (from environment root)
      */
     addTagsToFiles(data) {
-        // TODO: Emit events that tags were assigned.
         const tagNames = data.tagNames;
         const nixPaths = _.map(data.paths, Util.getEnvNixPath);
         const hashes = _.map(nixPaths, Util.getFileHash);
@@ -233,6 +234,16 @@ class Environment {
                 this._setMultipleEntityTags(entityIds, tagIds);
                 this.emitter.emit(BackendEvents.EnvTagFiles, {id: this.id, entityIds, hashes, tagIds});
             });
+    }
+
+    /**
+     * @param {object} data
+     * @param {string[]} data.tagIds IDs of tags to remove
+     * @param {string[]} data.entityIds Array of entity IDs from which to remove tags
+     */
+    removeTagsFromFiles(data) {
+        this._deleteMultipleEntityTags(data.entityIds, data.tagIds);
+        this.emitter.emit(BackendEvents.EnvUntagFiles, {id: this.id, entityIds: data.entityIds, tagIds: data.tagIds});
     }
 
     /**
