@@ -40,7 +40,7 @@
     "@types/fs-extra": "^7.0.0",
     "@types/lodash": "^4.14.132",
     "@types/node": "^8.10.48",
-    "electron": "3.1.9",
+    "electron": "^3.1.10",
     "electron-builder": "^20.40.2"
   },
   "dependencies": {

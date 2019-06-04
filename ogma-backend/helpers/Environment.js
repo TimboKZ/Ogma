@@ -350,9 +350,25 @@ class Environment {
      * @param {object} data
      * @param {string} data.path Path relative to environment root
      */
-    getThumbnail(data) {
-        const normPath = path.normalize(path.join(path.sep, data.path));
-        return this.thumbManager.getOrCreateThumbnail({path: normPath});
+    requestThumbnail(data) {
+        const normPath = Util.getEnvPath(data.path);
+
+        // Request a thumbnail from ThumbnailManager in a separate async branch. Don't make the client wait when
+        // it's done.
+        const func = () => this.thumbManager.getOrCreateThumbnail({path: normPath})
+            .then(thumbName => {
+                if (!thumbName) return null;
+                const hash = Util.getFileHash(upath.toUnix(normPath));
+                this.emitter.emit(BackendEvents.EnvThumbUpdate, {
+                    id: this.id,
+                    hash,
+                    thumb: ThumbnailState.Ready,
+                });
+            })
+            .catch(logger.error);
+        setTimeout(func, 50);
+
+        // Return here, it's okay if async logic doesn't finish.
     }
 
     getThumbsDir() {

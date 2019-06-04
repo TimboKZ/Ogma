@@ -10,7 +10,7 @@ const upath = require('upath');
 const Promise = require('bluebird');
 const ExactTrie = require('exact-trie');
 const Database = require('better-sqlite3');
-const ThumbnailGenerator = require('fs-thumbnail');
+const childProcess = require('child_process');
 
 const Util = require('./Util');
 const {VideoExtensions, ImageExtensions} = require('../../shared/typedef');
@@ -34,8 +34,6 @@ class ThumbManager {
         this.thumbsDir = data.thumbsDir;
         this.thumbsDbPath = data.thumbsDbPath;
         this.basePath = data.basePath;
-
-        this.generator = new ThumbnailGenerator({verbose: false, size: 300, quality: 30});
     }
 
     init() {
@@ -55,6 +53,24 @@ class ThumbManager {
         /** @type {function(string): {hash: string, nixPath: string, epoch: number}} */
         this.selectThumbByHash = Util.prepSqlGet(db, 'SELECT * FROM thumbnails WHERE hash = ?');
         this.deleteThumbByHash = Util.prepSqlRun(db, 'DELETE FROM thumbnails WHERE hash = ?');
+
+        this.childProcessReqId = 0;
+        this.childProcessReqMap = {};
+        this.childProcess = childProcess.fork(path.join(__dirname, 'ThumbnailGeneratorProcess.js'));
+        this.sendChildProcessRequest = (filePath, thumbPath) => {
+            return new Promise((resolve, reject) => {
+                const reqId = this.childProcessReqId++;
+                this.childProcessReqMap[reqId] = {resolve, reject};
+                this.childProcess.send({reqId, filePath, thumbPath});
+            });
+        };
+        this.childProcess.on('message', data => {
+            const {reqId, error, result} = data;
+            const callbacks = this.childProcessReqMap[reqId];
+            delete this.childProcessReqMap[reqId];
+            if (error) callbacks.reject(error);
+            else callbacks.resolve(result);
+        });
     }
 
     // noinspection JSMethodCanBeStatic
@@ -119,7 +135,7 @@ class ThumbManager {
 
     /**
      * @param {object} data
-     * @param {string} data.path Path relative to environment root, can be OS specific.
+     * @param {string} data.path File path relative to environment root, can be OS specific.
      * @returns {Promise.<string|null>}
      */
     getOrCreateThumbnail(data) {
@@ -137,10 +153,10 @@ class ThumbManager {
             .then(thumbExists => {
                 if (thumbExists) return thumbName;
 
-                return this.generator.getThumbnail({path: osPath, output: thumbPath})
-                    .then(generatedThumbPath => {
+                return this.sendChildProcessRequest(osPath, thumbPath)
+                    .then(thumbPath => {
                         // Some error occurred during generation
-                        if (!generatedThumbPath) return null;
+                        if (!thumbPath) return null;
 
                         // Store thumb data into the database
                         const epoch = Math.round(new Date().getTime() / 1000);
@@ -152,6 +168,7 @@ class ThumbManager {
     }
 
     close() {
+        this.childProcess.kill();
         this.db.close();
     }
 

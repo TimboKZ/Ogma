@@ -226,8 +226,8 @@ class IpcModule {
      * @param {string} data.id Environment ID
      * @param {string} data.path Relative path of the file (from environment root)
      */
-    getFileThumbnail(data) {
-        return this.envManager.getEnvironment(data).getThumbnail(data);
+    requestFileThumbnail(data) {
+        return this.envManager.getEnvironment(data).requestThumbnail(data);
     }
 
     // noinspection JSUnusedGlobalSymbols,JSMethodCanBeStatic
