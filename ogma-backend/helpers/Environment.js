@@ -94,19 +94,22 @@ class Environment {
         });
 
         this._selectAllTags = Util.prepSqlAll(db, 'SELECT * FROM tags');
-        this._insertTag = Util.prepSqlRun(db, 'INSERT INTO tags VALUES(?, ?, ?)');
         this._selectTagById = Util.prepSqlGet(db, 'SELECT * FROM tags WHERE id = ?');
-        this._insertTagsIfNotExists = db.transaction((ids, names) => {
-            const newTags = [];
-            for (let i = 0; i < ids.length; ++i) {
-                const id = ids[i];
-                if (this._selectTagById(id)) continue;
-                const name = names[i];
-                const color = _.sample(Colors);
-                this._insertTag(id, name, color);
-                newTags.push({id, name, color});
+        this._selectTagIdByName = Util.prepSqlGet(db, 'SELECT id FROM tags WHERE name = ? COLLATE NOCASE LIMIT 1', true);
+        this._selectMultipleTagIdsByNames = db.transaction(names => {
+            const tagIds = new Array(names.length);
+            const missingIndices = [];
+            for (let i = 0; i < names.length; ++i) {
+                tagIds[i] = this._selectTagIdByName(names[i]);
+                if (!tagIds[i]) missingIndices.push(i);
             }
-            return newTags;
+            return {tagIds, missingIndices};
+        });
+        this._insertTag = Util.prepSqlRun(db, 'INSERT INTO tags VALUES(?, ?, ?)');
+        this._insertMultipleTags = db.transaction(tags => {
+            for (const tag of tags) {
+                this._insertTag(tag.id, tag.name, tag.color);
+            }
         });
         this._setEntityTag = Util.prepSqlRun(db, 'REPLACE INTO entity_tags VALUES (?, ?)');
         this._setMultipleEntityTags = db.transaction((entityIds, tagIds) => {
@@ -213,8 +216,19 @@ class Environment {
         return Promise.resolve()
             .then(() => {
                 const tagNames = _.map(data.tagNames, s => s.trim());
-                const tagIds = _.map(tagNames, n => Util.getTagId(n.toLowerCase()));
-                const newTags = this._insertTagsIfNotExists(tagIds, tagNames);
+                const {tagIds, missingIndices} = this._selectMultipleTagIdsByNames(tagNames);
+                const newTags = new Array(missingIndices.length);
+                for (let i = 0; i < missingIndices.length; ++i) {
+                    const id = Util.getTagId();
+                    const index = missingIndices[i];
+                    tagIds[index] = id;
+                    newTags[i] = {
+                        id,
+                        name: tagNames[index],
+                        color: _.sample(Colors),
+                    };
+                }
+                this._insertMultipleTags(newTags);
                 this.emitter.emit(BackendEvents.EnvAddTags, {id: this.id, tags: newTags});
                 return tagIds;
             });

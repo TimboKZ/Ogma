@@ -50,11 +50,10 @@ class Util {
     }
 
     /**
-     * @param {string} name
      * @returns {string}
      */
-    static getTagId(name) {
-        return Util.getMd5(name.toLowerCase()).substring(0, 10);
+    static getTagId() {
+        return Util.getShortId();
     }
 
     static getEnvPath(relPath) {
