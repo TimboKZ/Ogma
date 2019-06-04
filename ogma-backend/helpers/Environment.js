@@ -89,6 +89,9 @@ class Environment {
 
         this._selectEntityIdByHash = Util.prepSqlGet(db, 'SELECT id FROM entities WHERE hash = ?', true);
         this._insertEntity = Util.prepSqlRun(db, 'INSERT INTO entities VALUES(?, ?, ?)');
+        this._insertMultipleEntities = db.transaction((entities) => {
+            for (const entity of entities) this._insertEntity(...entity);
+        });
 
         this._selectAllTags = Util.prepSqlAll(db, 'SELECT * FROM tags');
         this._insertTag = Util.prepSqlRun(db, 'INSERT INTO tags VALUES(?, ?, ?)');
@@ -180,6 +183,7 @@ class Environment {
             .then(() => {
                 const hashes = data.hashes || _.map(nixPaths, Util.getFileHash);
                 const entityIds = new Array(hashes.length);
+                const entities = [];
                 for (let i = 0; i < hashes.length; ++i) {
                     const hash = hashes[i];
                     const nixPath = nixPaths[i];
@@ -188,10 +192,11 @@ class Environment {
                         entityIds[i] = entityId;
                     } else {
                         const id = Util.getShortId();
-                        this._insertEntity(id, hash, nixPath);
+                        entities.push([id, hash, nixPath]);
                         entityIds[i] = id;
                     }
                 }
+                this._insertMultipleEntities(entities);
                 return entityIds;
             });
     }

@@ -15,6 +15,8 @@ const dateOptions = {
     minute: '2-digit',
 };
 
+let lastTime;
+
 class Logger {
 
     static info(...args) {
@@ -35,6 +37,16 @@ class Logger {
     static debug(...args) {
         const timeString = new Date().toLocaleString('en-us', dateOptions);
         console.log.apply(null, [`[${timeString}]`, chalk.magenta('DBG')].concat(args));
+    }
+
+    static time(...args) {
+        const date = new Date();
+        const timeString = date.toLocaleString('en-us', dateOptions);
+        const newTime = date.getTime();
+        let delayString = lastTime ? chalk.red(`[+${(newTime - lastTime) / 1000}s]`) : chalk.gray(`[...]`);
+        args.push(delayString);
+        console.log.apply(null, [`[${timeString}]`, chalk.cyan('DBG')].concat(args));
+        lastTime = newTime;
     }
 
 }
