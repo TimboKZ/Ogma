@@ -67,7 +67,7 @@ class Environment {
 
         // Create tables for all necessary data
         db.exec('CREATE TABLE IF NOT EXISTS properties (name TEXT PRIMARY KEY, value TEXT)');
-        db.exec('CREATE TABLE IF NOT EXISTS entities (id TEXT PRIMARY KEY, hash TEXT UNIQUE, filePath TEXT UNIQUE)');
+        db.exec('CREATE TABLE IF NOT EXISTS entities (id TEXT PRIMARY KEY, hash TEXT UNIQUE, nixPath TEXT UNIQUE)');
         db.exec(`CREATE TABLE IF NOT EXISTS tags
                  (
                      id    TEXT PRIMARY KEY,
@@ -102,6 +102,12 @@ class Environment {
             return slimEntities;
         });
         this._selectEntityIdByHash = Util.prepSqlGet(db, 'SELECT id FROM entities WHERE hash = ?', true);
+        this._selectEntityPathByHash = Util.prepSqlGet(db, 'SELECT nixPath FROM entities WHERE hash = ?', true);
+        this._selectEntityPathsByHashes = db.transaction(hashes => {
+            const nixPaths = new Array(hashes.length);
+            for (let i = 0; i < hashes.length; ++i) nixPaths[i] = this._selectEntityPathByHash(hashes[i]);
+            return nixPaths;
+        });
         this._insertEntity = Util.prepSqlRun(db, 'INSERT INTO entities VALUES(?, ?, ?)');
         this._insertMultipleEntities = db.transaction((entities) => {
             for (const entity of entities) this._insertEntity(...entity);
@@ -281,6 +287,21 @@ class Environment {
 
     getAllEntities() {
         return this._selectAllEntityIDsAndTagIDs();
+    }
+
+    /**
+     * @param {object} data
+     * @param {string[]} data.hashes File hashes which must come from known entities.
+     */
+    getEntityFiles(data) {
+        const nixPaths = this._selectEntityPathsByHashes(data.hashes);
+
+        const filePromises = new Array(nixPaths.length);
+        for (let i = 0; i < nixPaths.length; ++i) {
+            filePromises[i] = this.getFileDetails({path: nixPaths[i]});
+        }
+
+        return Promise.all([Promise.all(filePromises)]);
     }
 
     /**

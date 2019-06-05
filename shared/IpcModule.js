@@ -180,7 +180,17 @@ class IpcModule {
      * @param {string} data.id Environment ID
      */
     getAllEntities(data) {
-        return this.envManager.getEnvironment({id: data.id}).getAllEntities();
+        return this.envManager.getEnvironment(data).getAllEntities();
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string[]} data.hashes File hashes which must come from known entities.
+     */
+    getEntityFiles(data) {
+        return this.envManager.getEnvironment(data).getEntityFiles(data);
     }
 
     // noinspection JSUnusedGlobalSymbols
@@ -193,7 +203,7 @@ class IpcModule {
      * @param {string} [data.color]
      */
     setEnvProperty(data) {
-        return this.envManager.getEnvironment({id: data.id}).setProperty(data);
+        return this.envManager.getEnvironment(data).setProperty(data);
     }
 
     // noinspection JSUnusedGlobalSymbols
