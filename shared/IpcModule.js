@@ -224,10 +224,10 @@ class IpcModule {
     /**
      * @param {object} data
      * @param {string} data.id Environment ID
-     * @param {string} data.path Relative path of the file (from environment root)
+     * @param {string[]} data.paths Array of relative paths to files (from environment root)
      */
-    requestFileThumbnail(data) {
-        return this.envManager.getEnvironment(data).requestThumbnail(data);
+    requestFileThumbnails(data) {
+        return this.envManager.getEnvironment(data).requestThumbnails(data);
     }
 
     // noinspection JSUnusedGlobalSymbols,JSMethodCanBeStatic

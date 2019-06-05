@@ -6,6 +6,7 @@
   "main": "./ogma-backend/start-backend.js",
   "scripts": {
     "start": "electron .",
+    "prod": "cross-env NODE_ENV=production electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "postinstall": "electron-builder install-app-deps"
@@ -41,7 +42,8 @@
     "@types/lodash": "^4.14.132",
     "@types/node": "^8.10.48",
     "electron": "^3.1.10",
-    "electron-builder": "^20.40.2"
+    "electron-builder": "^20.40.2",
+    "cross-env": "^5.2.0"
   },
   "dependencies": {
     "better-sqlite3": "^5.4.0",

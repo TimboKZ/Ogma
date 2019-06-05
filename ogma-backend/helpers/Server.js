@@ -34,6 +34,8 @@ class Server {
 
         this.httpServer = http.Server(this.expressApp);
         this.socketIO = socketIO(this.httpServer);
+
+        // noinspection JSUnusedGlobalSymbols
         this.ipcModule = new IpcModule({socket: this.socketIO, logger, ogmaCore: this.ogmaCore});
 
         this.expressApp.get('/static/env/:slug/thumbs/*', (req, res) => {
@@ -63,15 +65,6 @@ class Server {
                 resolve();
             });
         });
-    }
-
-    /**
-     * @param {object} data
-     * @param {string} data.uri
-     * @param {string} data.path Absolute path to folder that we want to serve
-     */
-    addStaticPath(data) {
-        this.expressApp.use(data.uri, express.static(data.path));
     }
 
 }

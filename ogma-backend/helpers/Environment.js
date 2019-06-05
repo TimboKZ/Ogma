@@ -269,57 +269,68 @@ class Environment {
      * @param {object} data
      * @param {string} data.path Path relative to environment root
      */
+    getFileDetails(data) {
+        const filePath = path.join(this.path, data.path);
+        return fs.lstat(filePath)
+            .then(stats => {
+                const isDir = stats.isDirectory();
+
+                const nixPath = upath.toUnix(data.path);
+                const fileData = upath.parse(nixPath);
+                const hash = Util.getFileHash(nixPath);
+
+                let thumbState = ThumbnailState.Impossible;
+                if (!isDir) {
+                    if (this.thumbManager.canHaveThumbnail({path: nixPath})) {
+                        thumbState = ThumbnailState.Possible;
+                        if (this.thumbManager.checkThumbnailSync({hash, stats})) {
+                            thumbState = ThumbnailState.Ready;
+                        }
+                    }
+                }
+
+                const {entityId, tagIds} = this._selectEntityIdAndTagIdsByFileHash(hash);
+
+                return {
+                    hash,
+                    nixPath,
+                    base: fileData.base,
+                    ext: isDir ? '' : fileData.ext,
+                    name: isDir ? fileData.base : fileData.name,
+
+                    isDir,
+                    tagIds,
+                    entityId,
+                    thumb: thumbState,
+                };
+            });
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.path Path relative to environment root
+     */
     getDirectoryContents(data) {
         const relDirPath = Util.getEnvPath(data.path);
-        const nixDirPath = upath.toUnix(relDirPath);
         const fullDirPath = path.join(this.path, relDirPath);
 
         return fs.readdir(fullDirPath)
             .then(fileNames => {
                 _.remove(fileNames, f => f === OgmaEnvFolder);
 
+                const nixDirPath = upath.toUnix(relDirPath);
+                const dirPromise = this.getFileDetails({path: nixDirPath});
+
                 const filePromises = new Array(fileNames.length);
                 for (let i = 0; i < fileNames.length; ++i) {
                     const name = fileNames[i];
-                    const filePath = path.join(fullDirPath, name);
-                    filePromises[i] = Promise.resolve()
-                        .then(() => fs.lstat(filePath))
-                        .then(stats => {
-                            const data = path.parse(name);
-                            const isDir = stats.isDirectory();
-
-                            const nixPath = upath.join(nixDirPath, name);
-                            const hash = Util.getFileHash(nixPath);
-
-                            let thumbState = ThumbnailState.Impossible;
-                            if (!isDir) {
-                                if (this.thumbManager.canHaveThumbnail({path: nixPath})) {
-                                    thumbState = ThumbnailState.Possible;
-                                    if (this.thumbManager.checkThumbnailSync({hash, stats})) {
-                                        thumbState = ThumbnailState.Ready;
-                                    }
-                                }
-                            }
-
-                            const {entityId, tagIds} = this._selectEntityIdAndTagIdsByFileHash(hash);
-
-                            return {
-                                hash,
-                                nixPath,
-                                base: data.base,
-                                ext: isDir ? '' : data.ext,
-                                name: isDir ? data.base : data.name,
-
-                                isDir,
-                                tagIds,
-                                entityId,
-                                thumb: thumbState,
-                            };
-                        });
+                    const filePath = path.join(relDirPath, name);
+                    filePromises[i] = this.getFileDetails({path: filePath});
                 }
 
-                return Promise.all(filePromises);
-            });
+                return Promise.all([dirPromise, Promise.all(filePromises)]);
+            })
+            .then(result => ({directory: result[0], files: result[1]}));
     }
 
     /**
@@ -362,25 +373,28 @@ class Environment {
 
     /**
      * @param {object} data
-     * @param {string} data.path Path relative to environment root
+     * @param {string[]} data.paths Array of paths relative to environment root
      */
-    requestThumbnail(data) {
-        const normPath = Util.getEnvPath(data.path);
+    requestThumbnails(data) {
 
-        // Request a thumbnail from ThumbnailManager in a separate async branch. Don't make the client wait when
-        // it's done.
-        const func = () => this.thumbManager.getOrCreateThumbnail({path: normPath})
-            .then(thumbName => {
-                if (!thumbName) return null;
-                const hash = Util.getFileHash(upath.toUnix(normPath));
-                this.emitter.emit(BackendEvents.EnvThumbUpdate, {
-                    id: this.id,
-                    hash,
-                    thumb: ThumbnailState.Ready,
+        const promises = new Array(data.paths.length);
+        for (let i = 0; i < data.paths.length; ++i) {
+            const normPath = Util.getEnvPath(data.paths[i]);
+
+            // Request a thumbnail from ThumbnailManager in a separate async branch. Don't make the client wait when
+            // it's done.
+            promises[i] = this.thumbManager.getOrCreateThumbnail({path: normPath})
+                .then(thumbName => {
+                    if (!thumbName) return null;
+                    const hash = Util.getFileHash(upath.toUnix(normPath));
+                    this.emitter.emit(BackendEvents.EnvThumbUpdate, {
+                        id: this.id,
+                        hash,
+                        thumb: ThumbnailState.Ready,
+                    });
                 });
-            })
-            .catch(logger.error);
-        setTimeout(func, 50);
+        }
+        Promise.all(promises).catch(logger.error);
 
         // Return here, it's okay if async logic doesn't finish.
     }

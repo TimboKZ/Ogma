@@ -47,6 +47,8 @@ class OgmaCore {
     }
 
     init() {
+        logger.info(`Ogma backend running in ${Util.isDevelopment() ? 'development' : 'production'} mode.`);
+
         return Promise.resolve()
             .then(() => fs.ensureDir(this.ogmaHomePath))
             .then(() => this.config.init())
@@ -97,7 +99,8 @@ class OgmaCore {
             this.mainWindow.loadURL('http://localhost:3000');
             this.mainWindow.webContents.openDevTools();
         } else {
-            this.mainWindow.loadFile(path.join(Util.getStaticPath(), 'index.html'));
+            const url = `http://${this.host}:${this.port}`;
+            this.mainWindow.loadURL(url);
         }
 
         this.mainWindow.on('closed', () => {
