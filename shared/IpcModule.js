@@ -68,8 +68,7 @@ class IpcModule {
 
             socket.on('ipc-call', (data, callback) => {
                 this.requestCount++;
-                const requestId = this.requestCount;
-                // TODO: Log request here.
+                // TODO: Log request here with `setTimeout`.
 
                 Promise.resolve()
                     .then(() => this[data.name](data.data, socket))
@@ -156,6 +155,37 @@ class IpcModule {
     // noinspection JSUnusedGlobalSymbols
     /**
      * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string[]} data.tagNames Names of tags to add
+     * @param {string[]} data.paths Array of relative paths of the file (from environment root)
+     */
+    addTagsToFiles(data) {
+        return this.envManager.getEnvironment(data).addTagsToFiles(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string[]} data.tagIds IDs of tags to remove
+     * @param {string[]} data.entityIds Array of entity IDs from which to remove tags
+     */
+    removeTagsFromFiles(data) {
+        return this.envManager.getEnvironment(data).removeTagsFromFiles(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     */
+    getAllEntities(data) {
+        return this.envManager.getEnvironment({id: data.id}).getAllEntities();
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
      * @param {string} data.id
      * @param {string} [data.slug]
      * @param {string} [data.name]
@@ -237,28 +267,6 @@ class IpcModule {
      */
     openExternalLink(data) {
         electron.shell.openExternal(data.link);
-    }
-
-    // noinspection JSUnusedGlobalSymbols
-    /**
-     * @param {object} data
-     * @param {string} data.id Environment ID
-     * @param {string[]} data.tagNames Names of tags to add
-     * @param {string[]} data.paths Array of relative paths of the file (from environment root)
-     */
-    addTagsToFiles(data) {
-        return this.envManager.getEnvironment(data).addTagsToFiles(data);
-    }
-
-    // noinspection JSUnusedGlobalSymbols
-    /**
-     * @param {object} data
-     * @param {string} data.id Environment ID
-     * @param {string[]} data.tagIds IDs of tags to remove
-     * @param {string[]} data.entityIds Array of entity IDs from which to remove tags
-     */
-    removeTagsFromFiles(data) {
-        return this.envManager.getEnvironment(data).removeTagsFromFiles(data);
     }
 }
 

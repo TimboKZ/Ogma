@@ -87,6 +87,20 @@ class Environment {
         this._setProperty = Util.prepSqlRun(db, 'REPLACE INTO properties VALUES (?, ?)');
         this._getProperty = Util.prepSqlGet(db, 'SELECT value FROM properties WHERE name = ?', true);
 
+        this._selectAllEntities = Util.prepSqlAll(db, 'SELECT * FROM entities');
+        this._selectAllEntityIDsAndTagIDs = db.transaction(() => {
+            const fullEntities = this._selectAllEntities();
+            const slimEntities = new Array(fullEntities.length);
+            for (let i = 0; i < fullEntities.length; ++i) {
+                const entity = fullEntities[i];
+                slimEntities[i] = {
+                    id: entity.id,
+                    hash: entity.hash,
+                    tagIds: this._selectTagIdsByEntityId(entity.id),
+                };
+            }
+            return slimEntities;
+        });
         this._selectEntityIdByHash = Util.prepSqlGet(db, 'SELECT id FROM entities WHERE hash = ?', true);
         this._insertEntity = Util.prepSqlRun(db, 'INSERT INTO entities VALUES(?, ?, ?)');
         this._insertMultipleEntities = db.transaction((entities) => {
@@ -263,6 +277,10 @@ class Environment {
     removeTagsFromFiles(data) {
         this._deleteMultipleEntityTags(data.entityIds, data.tagIds);
         this.emitter.emit(BackendEvents.EnvUntagFiles, {id: this.id, entityIds: data.entityIds, tagIds: data.tagIds});
+    }
+
+    getAllEntities() {
+        return this._selectAllEntityIDsAndTagIDs();
     }
 
     /**
