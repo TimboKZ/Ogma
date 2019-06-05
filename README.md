@@ -1,7 +1,10 @@
 # 👁️ Ogma
-Tagging system for large file collections.
+
+File tagging system built on Electron. Includes web view support!
 
 ![Ogma tagging system](./Ogma_screenshot.jpg)
+
+![Ogma tagging system](./Ogma_screenshot_2.jpg)
 
 # Building & running
 
@@ -19,7 +22,28 @@ git submodule init
 git submodule update --recursive
 ```
 
+### Running in production mode
+
+First, install dependencies for the frontend modules and build it:
+```npm
+cd ogma-frontend/
+npm ci
+npm run build
+```
+
+Then, go back to root `Ogma/` directory, install Electron dependencies
+and run the app in production mode:
+```
+cd ..
+npm ci
+npm postinstall
+npm run prod
+```
+Enjoy!
+
 ### Running in development mode
+
+Running the app in development mode is useful if you want to change the React code for the frontend and get hot-reloading and real-time updates.
 
 First, make sure all of the native dependencies are rebuilt for the correct Electron version by running:
 ```bash

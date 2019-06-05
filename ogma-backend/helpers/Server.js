@@ -6,6 +6,7 @@
 
 const cors = require('cors');
 const http = require('http');
+const path = require('path');
 const express = require('express');
 const socketIO = require('socket.io');
 const IpcModule = require('../../shared/IpcModule');
@@ -56,6 +57,7 @@ class Server {
             res.sendFile(filePath, {root: env.getThumbsDir()});
         });
         this.expressApp.use('/', express.static(Util.getStaticPath()));
+        this.expressApp.use('*', express.static(path.join(Util.getStaticPath(), 'index.html')));
     }
 
     start() {

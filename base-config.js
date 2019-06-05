@@ -5,6 +5,6 @@
  */
 
 module.exports = {
-    ogmaHost: '192.168.1.230',
+    ogmaHost: 'localhost',
     ogmaPort: 10548,
 };
