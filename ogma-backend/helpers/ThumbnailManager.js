@@ -15,7 +15,7 @@ const Database = require('better-sqlite3');
 const childProcess = require('child_process');
 
 const Util = require('./Util');
-const {VideoExtensions, ImageExtensions} = require('../../shared/typedef');
+const {BackendEvents, ThumbnailState, VideoExtensions, ImageExtensions} = require('../../shared/typedef');
 
 const thumbExtsTrie = new ExactTrie();
 for (const ext of VideoExtensions) thumbExtsTrie.put(ext, true, true);
