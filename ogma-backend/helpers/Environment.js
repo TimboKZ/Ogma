@@ -41,7 +41,12 @@ class Environment {
 
         this.thumbsDir = path.join(this.confDir, 'thumbnails');
         const thumbsDbPath = path.join(this.confDir, 'thumbs.sqlite3');
-        this.thumbManager = new ThumbnailManager({thumbsDir: this.thumbsDir, thumbsDbPath, basePath: this.path});
+        this.thumbManager = new ThumbnailManager({
+            environment: this,
+            thumbsDir: this.thumbsDir,
+            thumbsDbPath,
+            basePath: this.path,
+        });
     }
 
     init() {
@@ -425,12 +430,6 @@ class Environment {
             promises[i] = this.thumbManager.getOrCreateThumbnail({path: normPath})
                 .then(thumbName => {
                     if (!thumbName) return null;
-                    const hash = Util.getFileHash(upath.toUnix(normPath));
-                    this.emitter.emit(BackendEvents.EnvThumbUpdate, {
-                        id: this.id,
-                        hash,
-                        thumb: ThumbnailState.Ready,
-                    });
                 });
         }
         Promise.all(promises).catch(logger.error);

@@ -4,9 +4,11 @@
  * @license LGPL-3.0
  */
 
+const _ = require('lodash');
 const path = require('path');
 const fs = require('fs-extra');
 const upath = require('upath');
+const Denque = require('denque');
 const Promise = require('bluebird');
 const ExactTrie = require('exact-trie');
 const Database = require('better-sqlite3');
@@ -26,11 +28,14 @@ class ThumbManager {
 
     /**
      * @param {object} data
+     * @param {Environment} data.environment
      * @param {string} data.thumbsDir
      * @param {string} data.thumbsDbPath
      * @param {string} data.basePath
      */
     constructor(data) {
+        this.environment = data.environment;
+        this.emitter = data.environment.emitter;
         this.thumbsDir = data.thumbsDir;
         this.thumbsDbPath = data.thumbsDbPath;
         this.basePath = data.basePath;
@@ -41,8 +46,7 @@ class ThumbManager {
         fs.ensureDirSync(this.thumbsDir);
         this.db = new Database(this.thumbsDbPath);
         const db = this.db;
-        db.exec(`CREATE TABLE IF NOT EXISTS
-                     thumbnails
+        db.exec(`CREATE TABLE IF NOT EXISTS thumbnails
                  (
                      hash    TEXT PRIMARY KEY UNIQUE,
                      nixPath TEXT,
@@ -54,22 +58,48 @@ class ThumbManager {
         this.selectThumbByHash = Util.prepSqlGet(db, 'SELECT * FROM thumbnails WHERE hash = ?');
         this.deleteThumbByHash = Util.prepSqlRun(db, 'DELETE FROM thumbnails WHERE hash = ?');
 
+        this.thumbsUpdatesQueue = new Denque();
+        this.debounceEmitThumbsUpdate = _.debounce(() => {
+            const queue = this.thumbsUpdatesQueue;
+            this.thumbsUpdatesQueue = new Denque();
+            this.emitter.emit(BackendEvents.EnvThumbUpdates, {
+                id: this.environment.id,
+                hashes: queue.toArray(),
+                thumb: ThumbnailState.Ready,
+            });
+        }, 100);
+
         this.childProcessReqId = 0;
         this.childProcessReqMap = {};
+        this.childProcessNixPathMap = {};
         this.childProcess = childProcess.fork(path.join(__dirname, 'ThumbnailGeneratorProcess.js'));
-        this.sendChildProcessRequest = (filePath, thumbPath) => {
-            return new Promise((resolve, reject) => {
-                const reqId = this.childProcessReqId++;
-                this.childProcessReqMap[reqId] = {resolve, reject};
-                this.childProcess.send({reqId, filePath, thumbPath});
-            });
+        this.sendChildProcessRequest = (nixPath, filePath, thumbPath) => {
+            if (this.childProcessNixPathMap[nixPath]) return;
+            this.childProcessNixPathMap[nixPath] = true;
+            const reqId = this.childProcessReqId++;
+            this.childProcessReqMap[reqId] = {nixPath, filePath};
+            this.childProcess.send({reqId, filePath, thumbPath});
         };
         this.childProcess.on('message', data => {
             const {reqId, error, result} = data;
-            const callbacks = this.childProcessReqMap[reqId];
+            const {nixPath, filePath} = this.childProcessReqMap[reqId];
             delete this.childProcessReqMap[reqId];
-            if (error) callbacks.reject(error);
-            else callbacks.resolve(result);
+            delete this.childProcessNixPathMap[nixPath];
+            if (error) {
+                logger.error(`Child process error occurred while creating thumbnail for path "${filePath}":`, error);
+                return;
+            }
+            if (!result) {
+                // Child process could not generate the thumbnail
+                return;
+            }
+
+            // Store thumb data into the database
+            const hash = Util.getFileHash(nixPath);
+            const epoch = Math.round(new Date().getTime() / 1000);
+            this.insertThumb(hash, nixPath, epoch);
+            this.thumbsUpdatesQueue.push(hash);
+            this.debounceEmitThumbsUpdate();
         });
     }
 
@@ -136,7 +166,9 @@ class ThumbManager {
     /**
      * @param {object} data
      * @param {string} data.path File path relative to environment root, can be OS specific.
-     * @returns {Promise.<string|null>}
+     * @returns {Promise.<string|boolean|null>} Returns the promise that resolve to file name if the thumbnail is
+     *                                          available, `true` if it's not available but a new version was requested,
+     *                                          and `null` if the thumbnail is not available and cannot be generated.
      */
     getOrCreateThumbnail(data) {
         if (!this.canHaveThumbnail(data)) return Promise.resolve(null);
@@ -153,17 +185,8 @@ class ThumbManager {
             .then(thumbExists => {
                 if (thumbExists) return thumbName;
 
-                return this.sendChildProcessRequest(osPath, thumbPath)
-                    .then(thumbPath => {
-                        // Some error occurred during generation
-                        if (!thumbPath) return null;
-
-                        // Store thumb data into the database
-                        const epoch = Math.round(new Date().getTime() / 1000);
-                        this.insertThumb(hash, nixPath, epoch);
-
-                        return thumbName;
-                    });
+                this.sendChildProcessRequest(nixPath, osPath, thumbPath);
+                return true;
             });
     }
 

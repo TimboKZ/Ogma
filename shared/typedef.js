@@ -31,7 +31,7 @@ const BackendEvents = {
     EnvTagFiles: 'env-tag-files',
     EnvUntagFiles: 'env-untag-files',
     EnvRemoveFiles: 'env-remove-files',
-    EnvThumbUpdate: 'env-thumb-update',
+    EnvThumbUpdates: 'env-thumb-updates',
 };
 const eventsToForward = [
     BackendEvents.UpdateEnvSummaries,
@@ -41,7 +41,7 @@ const eventsToForward = [
     BackendEvents.EnvTagFiles,
     BackendEvents.EnvUntagFiles,
     BackendEvents.EnvRemoveFiles,
-    BackendEvents.EnvThumbUpdate,
+    BackendEvents.EnvThumbUpdates,
 ];
 const ForwardedEventsMap = {};
 for (const eventName of eventsToForward) ForwardedEventsMap[eventName] = true;
