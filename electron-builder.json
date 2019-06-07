@@ -1,0 +1,8 @@
+{
+  "appId": "me.foxypanda.ogma",
+  "productName": "Ogma",
+  "linux": {
+    "target": "deb",
+    "category": "Utility"
+  }
+}

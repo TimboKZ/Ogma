@@ -8,12 +8,15 @@ const path = require('path');
 const upath = require('upath');
 const crypto = require('crypto');
 const shortid = require('shortid');
+const isDev = require('electron-is-dev');
 
 const Logger = require('./Logger');
 
 const packageRoot = path.normalize(path.join(__dirname, '..', '..'));
 const packageInfo = require('../../package');
 const staticPath = path.normalize(path.join(packageRoot, 'ogma-frontend', 'build'));
+
+const developmentMode = isDev && process.env.NODE_ENV !== 'production';
 
 class Util {
 
@@ -65,7 +68,7 @@ class Util {
     }
 
     static isDevelopment() {
-        return process.env.NODE_ENV !== 'production';
+        return developmentMode;
     }
 
     /**

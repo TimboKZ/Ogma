@@ -11,9 +11,6 @@
     "dist": "electron-builder",
     "postinstall": "electron-builder install-app-deps"
   },
-  "build": {
-    "appId": "me.foxypanda.ogma"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/v1ndic4te/Ogma.git"
@@ -51,6 +48,7 @@
     "chalk": "^2.4.2",
     "chroma-js": "^2.0.3",
     "cors": "^2.8.5",
+    "electron-is-dev": "^1.1.0",
     "electron-window-state": "^5.0.3",
     "eventemitter2": "^5.0.1",
     "exact-trie": "^1.0.2",
