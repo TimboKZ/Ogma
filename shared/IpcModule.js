@@ -316,7 +316,7 @@ class IpcModule {
      * @param {object} data
      * @param {string} data.id Environment ID
      * @param {string} data.path Relative path of the file (from environment root)
-     * @param {ClientDetails} client
+     * @param {ClientDetails} [client]
      */
     openFile(data, client) {
         if (!client.localClient) throw new Error('Only local clients can open files natively!');
@@ -328,7 +328,7 @@ class IpcModule {
      * @param {object} data
      * @param {string} data.id Environment ID
      * @param {string} data.path Relative path of the file (from environment root)
-     * @param {ClientDetails} client
+     * @param {ClientDetails} [client]
      */
     openInExplorer(data, client) {
         if (!client.localClient) throw new Error('Only local clients can open files in explorer!');
