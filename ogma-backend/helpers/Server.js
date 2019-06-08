@@ -4,9 +4,11 @@
  * @license GPL-3.0
  */
 
+const os = require('os');
 const cors = require('cors');
 const http = require('http');
 const path = require('path');
+const Denque = require('denque');
 const express = require('express');
 const socketIO = require('socket.io');
 const IpcModule = require('../../shared/IpcModule');
@@ -37,7 +39,12 @@ class Server {
         this.socketIO = socketIO(this.httpServer);
 
         // noinspection JSUnusedGlobalSymbols
-        this.ipcModule = new IpcModule({socket: this.socketIO, logger, ogmaCore: this.ogmaCore});
+        this.ipcModule = new IpcModule({
+            socket: this.socketIO,
+            logger,
+            ogmaCore: this.ogmaCore,
+            localIps: this.getIps(),
+        });
 
         this.expressApp.get('/static/env/:slug/thumbs/*', (req, res) => {
             const slug = req.params.slug;
@@ -58,6 +65,16 @@ class Server {
         });
         this.expressApp.use('/', express.static(Util.getStaticPath()));
         this.expressApp.use('*', express.static(path.join(Util.getStaticPath(), 'index.html')));
+    }
+
+    getIps() {
+        const ips = new Denque();
+        const interfaces = os.networkInterfaces();
+        for (const iName in interfaces) {
+            if (!interfaces.hasOwnProperty(iName)) continue;
+            interfaces[iName].forEach(iface => ips.push(iface.address));
+        }
+        return ips.toArray();
     }
 
     start() {

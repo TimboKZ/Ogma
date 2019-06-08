@@ -52,7 +52,7 @@
     "electron-is-dev": "^1.1.0",
     "electron-window-state": "^5.0.3",
     "eventemitter2": "^5.0.1",
-    "exact-trie": "^1.0.2",
+    "exact-trie": "^1.0.5",
     "express": "^4.17.0",
     "fs-extra": "^8.0.1",
     "fs-thumbnail": "^1.0.5",
@@ -63,6 +63,7 @@
     "socket.io": "^2.2.0",
     "trash": "^6.0.0",
     "trie-search": "^1.2.9",
+    "ua-parser-js": "^0.7.19",
     "upath": "^1.1.2"
   }
 }

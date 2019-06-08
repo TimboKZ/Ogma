@@ -5,8 +5,9 @@
  */
 
 const _ = require('lodash');
-const chalk = require('chalk');
+const {cyan, green, magenta, red, yellow} = require('chalk');
 const Promise = require('bluebird');
+const ExactTrie = require('exact-trie');
 
 const SharedUtil = require('./SharedUtil');
 const {ForwardedEventsMap} = require('./typedef');
@@ -14,9 +15,11 @@ const {ForwardedEventsMap} = require('./typedef');
 const isServer = typeof window === 'undefined';
 let Util = null;
 let electron = null;
+let uaParser = null;
 if (isServer) {
     Util = require('../ogma-backend/helpers/Util');
     electron = require('electron');
+    uaParser = require('ua-parser-js');
 }
 
 class IpcModule {
@@ -26,6 +29,7 @@ class IpcModule {
      * @param {object} data.socket
      * @param {Logger} [data.logger] For server mode
      * @param {OgmaCore} [data.ogmaCore] For server mode
+     * @param {string[]} [data.localIps] For server mode
      * @param {function(data: *)} [data.eventHandler] For client mode
      * @param {function(error: string)} [data.errorHandler] For client mode
      */
@@ -43,6 +47,10 @@ class IpcModule {
             this.ogmaCore = data.ogmaCore;
             this.emitter = this.ogmaCore.emitter;
             this.envManager = this.ogmaCore.envManager;
+
+            this.localIpTrie = new ExactTrie({ignoreCase: false}).putAll(data.localIps, true);
+            this.clientMap = {};
+
             this._setupServerSocket();
         } else {
             this.eventHandler = data.eventHandler;
@@ -62,25 +70,31 @@ class IpcModule {
 
         // Process messages from clients
         this.socket.on('connection', socket => {
-            const connId = socket.id;
-            const remoteAddress = socket.request.connection.remoteAddress;
-            this.logger.info(`New connection: ${connId} from ${remoteAddress}`);
+            const client = this._prepareClientDetails(socket);
+            this._addClient(client);
+
+            const addressString = `${client.ip}, ${client.userAgent.browser.name} on ${client.userAgent.os.name}`;
+            this.logger.info(`${green('Connected')}: ${cyan(client.id)} from <${magenta(addressString)}>`);
+            socket.on('disconnect', () => {
+                this._removeClient(client);
+                this.logger.info(`${red('Disconnected')}: ${cyan(client.id)} from <${magenta(addressString)}>`);
+            });
 
             socket.on('ipc-call', (data, callback) => {
                 this.requestCount++;
                 // TODO: Log request here with `setTimeout`.
 
                 Promise.resolve()
-                    .then(() => this[data.name](data.data, socket))
+                    .then(() => this[data.name](data.data, client))
                     .then(result => {
                         // Trigger the callback
                         callback({result});
 
                         // Print connection information
-                        const connSummary = `[IPC request] ${connId} -> ${chalk.cyan(data.name)}`;
-                        const resultString = `${chalk.magenta('result')}: ${SharedUtil.toHumanReadableType(result)}`;
+                        const connSummary = `[IPC request] ${client.id} -> ${cyan(data.name)}`;
+                        const resultString = `${magenta('result')}: ${SharedUtil.toHumanReadableType(result)}`;
                         if (data.data) {
-                            const dataString = `${chalk.magenta('data')}: ${JSON.stringify(data.data)}`;
+                            const dataString = `${magenta('data')}: ${JSON.stringify(data.data)}`;
                             this.logger.debug(`${connSummary}, ${dataString}, ${resultString}`);
                         } else {
                             this.logger.debug(`${connSummary}, ${resultString}`);
@@ -96,6 +110,50 @@ class IpcModule {
                     });
             });
         });
+    }
+
+    /**
+     * @param {object} socket
+     * @returns {ClientDetails}
+     * @private
+     */
+    _prepareClientDetails(socket) {
+        const id = Util.getShortId();
+        let ip = socket.client.request.headers['x-forwarded-for']
+            || socket.client.conn.remoteAddress
+            || socket.conn.remoteAddress
+            || socket.request.connection.remoteAddress;
+        let localClient = false;
+        const userAgent = uaParser(socket.handshake.headers['user-agent']);
+
+        // Determine if connection comes from a local client
+        if (ip === '::1') {
+            ip = 'local';
+            localClient = true;
+        } else if (ip.startsWith('::ffff:')) {
+            ip = ip.substring(7);
+            if (this.localIpTrie.has(ip)) {
+                localClient = true;
+            }
+        } else {
+            // TODO: Need to support IPv6...
+        }
+
+        return {
+            id,
+            ip,
+            localClient,
+            userAgent,
+            socket,
+        };
+    }
+
+    _addClient(client) {
+        this.clientMap[client.id] = client;
+    }
+
+    _removeClient(client) {
+        delete this.clientMap[client.id];
     }
 
     _setupClientSocket() {
@@ -126,12 +184,14 @@ class IpcModule {
     // noinspection JSUnusedGlobalSymbols,JSMethodCanBeStatic
     /**
      * @param {object} [data]
-     * @param {object} [socket]
+     * @param {object} [client]
      * @returns {ConnectionDetails}
      */
-    getConnectionDetails(data = {}, socket) {
-        // TODO: Check if socket connection comes from the same machine
-        return {localClient: true};
+    getClientDetails(data = {}, client) {
+        return {
+            id: client.id,
+            localClient: client.localClient,
+        };
     }
 
     // noinspection JSUnusedGlobalSymbols
@@ -207,7 +267,10 @@ class IpcModule {
     }
 
     // noinspection JSUnusedGlobalSymbols
-    createEnvironment() {
+    createEnvironment(_, client) {
+        if (!client.localClient) {
+            throw new Error('Only local clients can create new environment!');
+        }
         return this.envManager.createEnvironment();
     }
 
@@ -235,8 +298,10 @@ class IpcModule {
      * @param {object} data
      * @param {string} data.id Environment ID
      * @param {string} data.path Relative path of the file (from environment root)
+     * @param {ClientDetails} client
      */
-    openFile(data) {
+    openFile(data, client) {
+        if (!client.localClient) throw new Error('Only local clients can open files natively!');
         return this.envManager.getEnvironment(data).openFile(data);
     }
 
@@ -245,8 +310,10 @@ class IpcModule {
      * @param {object} data
      * @param {string} data.id Environment ID
      * @param {string} data.path Relative path of the file (from environment root)
+     * @param {ClientDetails} client
      */
-    openInExplorer(data) {
+    openInExplorer(data, client) {
+        if (!client.localClient) throw new Error('Only local clients can open files in explorer!');
         return this.envManager.getEnvironment(data).openInExplorer(data);
     }
 
@@ -274,8 +341,10 @@ class IpcModule {
     /**
      * @param {object} data
      * @param {string} data.link
+     * @param {ClientDetails} client
      */
-    openExternalLink(data) {
+    openExternalLink(data, client) {
+        if (!client.localClient) throw new Error('Only local clients can open external links!');
         electron.shell.openExternal(data.link);
     }
 }

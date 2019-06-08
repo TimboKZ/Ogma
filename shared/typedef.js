@@ -20,6 +20,14 @@
  * @typedef {string} RelPath
  * @typedef {string} AnyPath
  */
+/**
+ * @typedef {object} ClientDetails
+ * @property {string} id
+ * @property {string} ip
+ * @property {boolean} localClient
+ * @property {string} userAgent
+ * @property {object} socket
+ */
 
 const OgmaEnvFolder = '.ogma-env';
 /** @enum {string} BackendEvents */
