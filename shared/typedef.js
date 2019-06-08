@@ -11,6 +11,7 @@
  */
 /**
  * @typedef {object} ConnectionDetails
+ * @property {string} id
  * @property {boolean} localClient
  */
 /** @typedef {EventEmitter2} EventEmitter */
@@ -32,6 +33,9 @@
 const OgmaEnvFolder = '.ogma-env';
 /** @enum {string} BackendEvents */
 const BackendEvents = {
+    AddConnection: 'add-conn',
+    RemoveConnection: 'remove-conn',
+
     UpdateEnvSummaries: 'update-env-summaries',
     UpdateEnvSummary: 'update-env-summary',
 
@@ -42,6 +46,9 @@ const BackendEvents = {
     EnvThumbUpdates: 'env-thumb-updates',
 };
 const eventsToForward = [
+    BackendEvents.AddConnection,
+    BackendEvents.RemoveConnection,
+
     BackendEvents.UpdateEnvSummaries,
     BackendEvents.UpdateEnvSummary,
 

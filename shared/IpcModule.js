@@ -10,7 +10,7 @@ const Promise = require('bluebird');
 const ExactTrie = require('exact-trie');
 
 const SharedUtil = require('./SharedUtil');
-const {ForwardedEventsMap} = require('./typedef');
+const {BackendEvents, ForwardedEventsMap} = require('./typedef');
 
 const isServer = typeof window === 'undefined';
 let Util = null;
@@ -150,10 +150,17 @@ class IpcModule {
 
     _addClient(client) {
         this.clientMap[client.id] = client;
+        this.emitter.emit(BackendEvents.AddConnection, {
+            id: client.id,
+            ip: client.ip,
+            localClient: client.localClient,
+            userAgent: client.userAgent,
+        });
     }
 
     _removeClient(client) {
         delete this.clientMap[client.id];
+        this.emitter.emit(BackendEvents.RemoveConnection, client.id);
     }
 
     _setupClientSocket() {
@@ -187,11 +194,22 @@ class IpcModule {
      * @param {object} [client]
      * @returns {ConnectionDetails}
      */
-    getClientDetails(data = {}, client) {
+    getClientDetails(data = null, client) {
         return {
             id: client.id,
             localClient: client.localClient,
         };
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    getConnectionList() {
+        const clients = Object.values(this.clientMap);
+        return clients.map(client => ({
+            id: client.id,
+            ip: client.ip,
+            localClient: client.localClient,
+            userAgent: client.userAgent,
+        }));
     }
 
     // noinspection JSUnusedGlobalSymbols
