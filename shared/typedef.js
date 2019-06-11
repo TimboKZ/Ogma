@@ -40,26 +40,13 @@ const BackendEvents = {
     UpdateEnvSummary: 'update-env-summary',
 
     EnvAddTags: 'env-add-tags',
+    EnvUpdateEntities: 'env-upd-ent',
+    EnvAddFiles: 'env-add-files',
     EnvTagFiles: 'env-tag-files',
     EnvUntagFiles: 'env-untag-files',
     EnvRemoveFiles: 'env-remove-files',
     EnvThumbUpdates: 'env-thumb-updates',
 };
-const eventsToForward = [
-    BackendEvents.AddConnection,
-    BackendEvents.RemoveConnection,
-
-    BackendEvents.UpdateEnvSummaries,
-    BackendEvents.UpdateEnvSummary,
-
-    BackendEvents.EnvAddTags,
-    BackendEvents.EnvTagFiles,
-    BackendEvents.EnvUntagFiles,
-    BackendEvents.EnvRemoveFiles,
-    BackendEvents.EnvThumbUpdates,
-];
-const ForwardedEventsMap = {};
-for (const eventName of eventsToForward) ForwardedEventsMap[eventName] = true;
 
 /**
  * @typedef {object} EnvSummary
@@ -493,7 +480,6 @@ const AudioExtensions = [
 module.exports = {
     OgmaEnvFolder,
     BackendEvents,
-    ForwardedEventsMap,
     EnvProperty,
     MutableEnvProperties,
     Colors,

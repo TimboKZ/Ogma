@@ -117,6 +117,8 @@ class Environment {
         this._insertMultipleEntities = db.transaction((entities) => {
             for (const entity of entities) this._insertEntity(...entity);
         });
+        const _updateEntityHash = Util.prepSqlRun(db, 'UPDATE entities SET hash = ?, nixPath = ? WHERE hash = ?');
+        this._updateEntityHash = (oldHash, newHash, newNixPath) => _updateEntityHash(newHash, newNixPath, oldHash);
 
         this._selectAllTags = Util.prepSqlAll(db, 'SELECT * FROM tags');
         this._selectTagById = Util.prepSqlGet(db, 'SELECT * FROM tags WHERE id = ?');
@@ -211,7 +213,9 @@ class Environment {
             .then(() => {
                 const hashes = data.hashes || _.map(nixPaths, Util.getFileHash);
                 const entityIds = new Array(hashes.length);
+                // TODO: Replace with Denque, cos why not?
                 const entities = [];
+                const slimEntities = [];
                 for (let i = 0; i < hashes.length; ++i) {
                     const hash = hashes[i];
                     const nixPath = nixPaths[i];
@@ -222,9 +226,12 @@ class Environment {
                         const id = Util.getShortId();
                         entities.push([id, hash, nixPath]);
                         entityIds[i] = id;
+                        slimEntities.push({id, hash});
                     }
                 }
                 this._insertMultipleEntities(entities);
+
+                this.emitter.emit(BackendEvents.EnvUpdateEntities, {id: this.id, entities: slimEntities});
                 return entityIds;
             });
     }
@@ -399,6 +406,42 @@ class Environment {
 
     /**
      * @param {object} data
+     * @param {string} data.oldPath Current path to the file, relative to environment root.
+     * @param {string} data.newPath New path to the file, relative to environment root.
+     * @param {boolean} [data.overwrite=false] Whether to overwrite if the new file already exists
+     */
+    renameFile(data) {
+        return Promise.resolve()
+            .then(() => {
+                const oldPath = path.join(this.path, data.oldPath);
+                if (!fs.existsSync(oldPath)) throw new Error(`The original path does not exist: ${oldPath}`);
+                const newPath = path.join(this.path, data.newPath);
+                if (!data.overwrite && fs.existsSync(newPath))
+                    throw new Error(`That new path is already taken! Path: ${newPath}`);
+
+                const oldNixPath = Util.getEnvNixPath(data.oldPath);
+                const oldHash = Util.getFileHash(oldNixPath);
+                const newNixPath = Util.getEnvNixPath(data.newPath);
+                const newHash = Util.getFileHash(newNixPath);
+                const entityId = this._selectEntityIdByHash(oldHash);
+                if (entityId) this._updateEntityHash(oldHash, newHash, newNixPath);
+
+                const promises = [fs.rename(oldPath, newPath), this.thumbManager.removeThumbnail({hash: oldHash})];
+                return Promise.all(promises)
+                    .then(() => this.getFileDetails({path: newNixPath}))
+                    .then(fileDetails => {
+                        this.emitter.emit(BackendEvents.EnvAddFiles, {id: this.id, files: [fileDetails]});
+                        if (entityId) {
+                            const slimEntities = [{id: entityId, hash: newHash}];
+                            this.emitter.emit(BackendEvents.EnvUpdateEntities, {id: this.id, entities: slimEntities});
+                        }
+                        this.emitter.emit(BackendEvents.EnvRemoveFiles, {id: this.id, hashes: [oldHash]});
+                    });
+            });
+    }
+
+    /**
+     * @param {object} data
      * @param {string[]} data.paths Array of paths relative to environment root
      */
     removeFiles(data) {
@@ -408,7 +451,7 @@ class Environment {
         return trash(fullPaths)
             .then(() => {
                 const hashes = _.map(nixPaths, p => Util.getFileHash(p));
-                this.emitter.emit(BackendEvents.EnvRemoveFiles, {id: this.id, hashes, paths: nixPaths});
+                this.emitter.emit(BackendEvents.EnvRemoveFiles, {id: this.id, hashes});
 
                 // TODO: Remove thumbnails from all children of a folder!
                 _.map(hashes, hash => this.thumbManager.removeThumbnail({hash}).catch(logger.error));

@@ -10,7 +10,7 @@ const Promise = require('bluebird');
 const ExactTrie = require('exact-trie');
 
 const SharedUtil = require('./SharedUtil');
-const {BackendEvents, ForwardedEventsMap} = require('./typedef');
+const {BackendEvents} = require('./typedef');
 
 const isServer = typeof window === 'undefined';
 let Util = null;
@@ -64,7 +64,7 @@ class IpcModule {
         const that = this;
         this.emitter.addListener('*', function (...args) {
             const eventName = this.event;
-            if (!ForwardedEventsMap[eventName]) return;
+            // if (!ForwardedEventsMap[eventName]) return;
             that.socket.sockets.emit('ipc-forward-event', {name: eventName, args});
         });
 
@@ -333,6 +333,18 @@ class IpcModule {
     openInExplorer(data, client) {
         if (!client.localClient) throw new Error('Only local clients can open files in explorer!');
         return this.envManager.getEnvironment(data).openInExplorer(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string} data.oldPath Current path to the file, relative to environment root.
+     * @param {string} data.newPath New path to the file, relative to environment root.
+     * @param {boolean} [data.overwrite=false] Whether to overwrite if the new file already exists
+     */
+    renameFile(data) {
+        return this.envManager.getEnvironment(data).renameFile(data);
     }
 
     // noinspection JSUnusedGlobalSymbols

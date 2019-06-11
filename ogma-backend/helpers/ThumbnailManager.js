@@ -159,7 +159,7 @@ class ThumbManager {
 
                 const thumbName = `${hash}.jpg`;
                 const thumbPath = path.join(this.thumbsDir, thumbName);
-                return fs.pathExistsSync(thumbPath) ? fs.unlink(thumbPath) : null;
+                return fs.existsSync(thumbPath) ? fs.unlink(thumbPath) : null;
             });
     }
 
