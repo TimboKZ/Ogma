@@ -4,26 +4,32 @@
  * @license LGPL-3.0
  */
 
+const path = require('path');
+const fs = require('fs-extra');
 const Database = require('better-sqlite3');
 
 const Util = require('../Util');
 
 const logger = Util.getLogger();
+const LatestDbVersion = 1;
 
 class EnvironmentRepo {
 
     /**
      * @param {object} data
+     * @param {Environment} data.environment
      * @param {string} data.dbPath Absolute path to DB file
      */
     constructor(data) {
-        this.dbPath = data.dbPath;
+        this._dbPath = data.dbPath;
+        this._sqlDir = path.join(__dirname, 'sql');
+        this._schemaPath = path.join(this._sqlDir, 'env-schema.sql');
     }
 
     init() {
-        this._db = new Database(this.dbPath);
-        this._initScheme();
-        this._attemptMigrate();
+        this._db = new Database(this._dbPath);
+        this._initSchema();
+        this._runAutoMigration();
         this._initPropMethods();
         this._initEntityMethods();
         this._initTagMethods();
@@ -34,50 +40,113 @@ class EnvironmentRepo {
         this._db.close();
     }
 
-    _initScheme() {
+    _runSqlFile(filePath) {
+        const db = this._db;
+        const sql = fs.readFileSync(filePath, 'utf8').toString();
+        db.exec(sql);
+    }
+
+    _initSchema() {
         const db = this._db;
         db.pragma('foreign_keys = on');
 
-        // Create tables for all necessary data
-        db.exec('CREATE TABLE IF NOT EXISTS properties (name TEXT PRIMARY KEY, value TEXT)');
-        db.exec('CREATE TABLE IF NOT EXISTS entities (id TEXT PRIMARY KEY, hash TEXT UNIQUE, nixPath TEXT UNIQUE)');
-        db.exec(`CREATE TABLE IF NOT EXISTS tags
-                 (
-                     id    TEXT PRIMARY KEY,
-                     name  TEXT,
-                     color TEXT
-                 )`);
-        db.exec(`CREATE TABLE IF NOT EXISTS entity_tags
-                 (
-                     entityId TEXT,
-                     tagId    TEXT,
-                     UNIQUE (entityId, tagId),
-                     FOREIGN KEY (entityId) REFERENCES entities (id) ON DELETE CASCADE,
-                     FOREIGN KEY (tagId) REFERENCES tags (id) ON DELETE CASCADE
-                 )`);
+        // Initialize schema
+        this._runSqlFile(this._schemaPath);
+        const _getTableName =
+            Util.prepSqlGet(db, 'SELECT name FROM sqlite_master WHERE type = \'table\' AND name = ?');
+        this._hasTable = tableName => !!_getTableName(tableName);
     }
 
     // noinspection JSMethodCanBeStatic
-    _attemptMigrate() {
-        logger.warn('Environment DB auto-migrate method is not implemented yet!');
+    _runAutoMigration() {
+        const db = this._db;
+
+        const prepareVersionMethods = () => {
+            /** @type {function(): number} */
+            this.getVersion = Util.prepSqlGet(db, 'SELECT version FROM version LIMIT 1', true);
+            /** @type {function(version: number): void} */
+            this._setVersion = Util.prepSqlRun(db, 'REPLACE INTO version VALUES (?)');
+        };
+
+        let version;
+        if (this._hasTable('version')) {
+            prepareVersionMethods();
+            version = this.getVersion();
+            if (!version) {
+                // Must be a newly created table, insert most recent schema.
+                this._setVersion(LatestDbVersion);
+                version = LatestDbVersion;
+            }
+        } else {
+            db.exec('CREATE TABLE IF NOT EXISTS version (version INTEGER PRIMARY KEY)');
+            prepareVersionMethods();
+            version = null;
+        }
+        if (version === LatestDbVersion) return;
+        logger.info(`Migrating environment DB file: ${this._dbPath}`);
+        logger.info(`Current DB version: ${version}. Latest version: ${LatestDbVersion}.`);
+
+        // Alpha -> v1
+        if (!version) {
+            logger.info('Migrating from alpha to v1...');
+            this._runSqlFile(path.join(this._sqlDir, 'm-alpha-1.sql'));
+            logger.info('Migrated to v1.');
+            this._setVersion(1);
+            version = 1;
+        }
+
+        // Check if we reached the latest version.
+        if (version === LatestDbVersion) {
+            logger.info(`Finished DB file migration. Current version: ${version}.`);
+        } else {
+            const errorMessage = `DB migration incomplete - could not reach v${LatestDbVersion}! Current version: ${version}.`;
+            logger.error(errorMessage);
+            throw new Error(errorMessage);
+        }
     }
 
     _initPropMethods() {
         const db = this._db;
 
-        /** @type {function(name: string, value: any): void} */
-        this.setProperty = Util.prepSqlRun(db, 'REPLACE INTO properties VALUES (?, ?)');
         /** @type {function(name: string): string} */
         this.getProperty = Util.prepSqlGet(db, 'SELECT value FROM properties WHERE name = ?', true);
+        /** @type {function(name: string, value: any): void} */
+        this.setProperty = Util.prepSqlRun(db, 'REPLACE INTO properties VALUES (?, ?)');
     }
 
     _initEntityMethods() {
         const db = this._db;
 
+        /**
+         * @param {*} entity
+         * @returns {DBEntity}
+         */
+        const _parseEntityBoolean = entity => {
+            if (!entity) return entity;
+            // noinspection EqualityComparisonWithCoercionJS,JSIncompatibleTypesComparison
+            entity.isDir = entity.isDir == 1;
+            return entity;
+        };
+
+        const _selectAllEntities = Util.prepSqlAll(db, 'SELECT * FROM entities');
         /** @type {function(): DBEntity[]} */
-        this.selectAllEntities = Util.prepSqlAll(db, 'SELECT * FROM entities');
+        this.selectAllEntities = () => _selectAllEntities().map(_parseEntityBoolean);
+        const _selectAllSinks = Util.prepSqlAll(db, 'SELECT * FROM entities WHERE isDir = 1');
+        /** @type {function(): DBEntity[]} */
+        this.selectAllSinks = () => _selectAllSinks().map(_parseEntityBoolean);
+        /** @type {function(): DBSlimEntity[]} */
+        this.selectAllSinksWithTagIds = Util.prepTransaction(db, () => {
+            const sinks = this.selectAllSinks();
+            const sinksWithTags = new Array(sinks.length);
+            for (let i = 0; i < sinks.length; ++i) {
+                const sink = sinks[i];
+                sinksWithTags[i] = {...sink, tagIds: this.selectTagIdsByEntityId(sink.id)};
+            }
+            return sinksWithTags;
+        });
+        const _selAllEntsByPathPref = Util.prepSqlAll(db, 'SELECT * FROM entities WHERE nixPath LIKE (? || \'%\')');
         /** @type {function(nixPathPrefix: string): DBEntity[]} */
-        this.selectAllEntitiesByPathPrefix = Util.prepSqlAll(db, 'SELECT * FROM entities WHERE nixPath LIKE (? || \'%\')');
+        this.selectAllEntitiesByPathPrefix = nixPathPrefix => _selAllEntsByPathPref(nixPathPrefix).map(_parseEntityBoolean);
         /** @type {function(): DBSlimEntity[]} */
         this.selectAllEntityIDsAndTagIDs = Util.prepTransaction(db, () => {
             const fullEntities = this.selectAllEntities();
@@ -87,6 +156,7 @@ class EnvironmentRepo {
                 slimEntities[i] = {
                     id: entity.id,
                     hash: entity.hash,
+                    isDir: entity.isDir,
                     tagIds: this.selectTagIdsByEntityId(entity.id),
                 };
             }
@@ -101,14 +171,26 @@ class EnvironmentRepo {
             for (let i = 0; i < ids.length; ++i) nixPaths[i] = this.selectEntityPathById(ids[i]);
             return nixPaths;
         });
+        const _selectEntityByHash = Util.prepSqlGet(db, 'SELECT * FROM entities WHERE hash = ?');
+        /** @param {string} hash */
+        this.selectEntityByHash = hash => _parseEntityBoolean(_selectEntityByHash(hash));
+        /** @type {function(hashes: string[]): DBEntity[]} */
+        this.selectMultipleEntitiesByHashes = Util.prepTransaction(db, hashes => {
+            const entities = new Array(hashes.length);
+            for (let i = 0; i < entities.length; ++i) {
+                entities[i] = this.selectEntityByHash(hashes[i]);
+            }
+            return entities;
+        });
         /** @type {function(hash: string): string|null} */
         this.selectEntityIdByHash = Util.prepSqlGet(db, 'SELECT id FROM entities WHERE hash = ?', true);
 
-        /** @type {function(id: string, hash: string, nixPath: string): void} */
-        this.insertEntity = Util.prepSqlRun(db, 'INSERT INTO entities VALUES(?, ?, ?)');
+        const _insertEntity = Util.prepSqlRun(db, 'INSERT INTO entities VALUES(?, ?, ?, ?)');
+        /** @type {function(id: string, hash: string, nixPath: string, isDir: boolean): void} */
+        this.insertEntity = (id, hash, nixPath, isDir) => _insertEntity(id, hash, nixPath, isDir ? 1 : 0);
         /** @type {function(DBEntity[]): void} */
         this.insertMultipleEntities = Util.prepTransaction(db, (entities) => {
-            for (const entity of entities) this.insertEntity(entity.id, entity.hash, entity.nixPath);
+            for (const entity of entities) this.insertEntity(entity.id, entity.hash, entity.nixPath, entity.isDir);
         });
 
         const updateEntityHash = Util.prepSqlRun(db, 'UPDATE entities SET hash = ?, nixPath = ? WHERE hash = ?');

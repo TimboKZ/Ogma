@@ -336,6 +336,15 @@ class IpcModule {
         return this.envManager.getEnvironment(data).openInExplorer(data);
     }
 
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string} data.paths Paths to files that will be sorted to sinks.
+     */
+    moveFilesToSink(data) {
+        return this.envManager.getEnvironment(data).moveFilesToSinks(data);
+    }
+
     // noinspection JSUnusedGlobalSymbols
     /**
      * @param {object} data

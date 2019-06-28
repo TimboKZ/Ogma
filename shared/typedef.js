@@ -60,11 +60,13 @@ const BackendEvents = {
  * @property {string} id
  * @property {string} hash
  * @property {string} nixPath
+ * @property {boolean} isDir
  */
 /**
  * @typedef {object} DBSlimEntity
  * @property {string} id
  * @property {string} hash
+ * @property {boolean} isDir
  * @property {string[]} [tagIds]
  */
 /**
