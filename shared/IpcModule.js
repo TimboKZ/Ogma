@@ -265,8 +265,8 @@ class IpcModule {
     /**
      * @param {object} data
      * @param {string} data.id Environment ID
-     * @param {string[]} data.hashes File hashes which must come from known entities.
-     * @returns {Promise.<DBSlimEntity[]>}
+     * @param {string[]} data.entityIds Entity IDs for each file details will be fetched.
+     * @returns {Promise.<(FileDetails||FileErrorStatus)[]>}
      */
     getEntityFiles(data) {
         return this.envManager.getEnvironment(data).getEntityFiles(data);

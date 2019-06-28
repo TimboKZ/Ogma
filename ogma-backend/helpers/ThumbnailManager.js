@@ -165,6 +165,15 @@ class ThumbManager {
 
     /**
      * @param {object} data
+     * @param {string} data.nixPath Directory Unix path relative to environment root.
+     */
+    removeDirectory(data) {
+        // TODO: Implement this - removing thumbnails of all children of a directory.
+        return Promise.resolve();
+    }
+
+    /**
+     * @param {object} data
      * @param {string} data.path File path relative to environment root, can be OS specific.
      * @returns {Promise.<string|boolean|null>} Returns the promise that resolve to file name if the thumbnail is
      *                                          available, `true` if it's not available but a new version was requested,

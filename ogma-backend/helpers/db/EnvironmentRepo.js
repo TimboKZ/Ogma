@@ -23,6 +23,7 @@ class EnvironmentRepo {
     init() {
         this._db = new Database(this.dbPath);
         this._initScheme();
+        this._attemptMigrate();
         this._initPropMethods();
         this._initEntityMethods();
         this._initTagMethods();
@@ -51,9 +52,14 @@ class EnvironmentRepo {
                      entityId TEXT,
                      tagId    TEXT,
                      UNIQUE (entityId, tagId),
-                     FOREIGN KEY (entityId) REFERENCES entities (id),
-                     FOREIGN KEY (tagId) REFERENCES tags (id)
+                     FOREIGN KEY (entityId) REFERENCES entities (id) ON DELETE CASCADE,
+                     FOREIGN KEY (tagId) REFERENCES tags (id) ON DELETE CASCADE
                  )`);
+    }
+
+    // noinspection JSMethodCanBeStatic
+    _attemptMigrate() {
+        logger.warn('Environment DB auto-migrate method is not implemented yet!');
     }
 
     _initPropMethods() {
@@ -70,6 +76,8 @@ class EnvironmentRepo {
 
         /** @type {function(): DBEntity[]} */
         this.selectAllEntities = Util.prepSqlAll(db, 'SELECT * FROM entities');
+        /** @type {function(nixPathPrefix: string): DBEntity[]} */
+        this.selectAllEntitiesByPathPrefix = Util.prepSqlAll(db, 'SELECT * FROM entities WHERE nixPath LIKE (? || \'%\')');
         /** @type {function(): DBSlimEntity[]} */
         this.selectAllEntityIDsAndTagIDs = Util.prepTransaction(db, () => {
             const fullEntities = this.selectAllEntities();
@@ -84,17 +92,17 @@ class EnvironmentRepo {
             }
             return slimEntities;
         });
-        /** @type {function(string[]): string[]} */
-        this.selectEntityPathsByHashes = Util.prepTransaction(db, hashes => {
-            const nixPaths = new Array(hashes.length);
-            for (let i = 0; i < hashes.length; ++i) nixPaths[i] = this.selectEntityPathByHash(hashes[i]);
+
+        /** @type {function(id: string): string|null} */
+        this.selectEntityPathById = Util.prepSqlGet(db, 'SELECT nixPath FROM entities WHERE id = ?', true);
+        /** @type {function(ids: string[]): string[]} */
+        this.selectEntityPathsByIds = Util.prepTransaction(db, ids => {
+            const nixPaths = new Array(ids.length);
+            for (let i = 0; i < ids.length; ++i) nixPaths[i] = this.selectEntityPathById(ids[i]);
             return nixPaths;
         });
-
         /** @type {function(hash: string): string|null} */
         this.selectEntityIdByHash = Util.prepSqlGet(db, 'SELECT id FROM entities WHERE hash = ?', true);
-        /** @type {function(hash: string): string|null} */
-        this.selectEntityPathByHash = Util.prepSqlGet(db, 'SELECT nixPath FROM entities WHERE hash = ?', true);
 
         /** @type {function(id: string, hash: string, nixPath: string): void} */
         this.insertEntity = Util.prepSqlRun(db, 'INSERT INTO entities VALUES(?, ?, ?)');
@@ -106,6 +114,30 @@ class EnvironmentRepo {
         const updateEntityHash = Util.prepSqlRun(db, 'UPDATE entities SET hash = ?, nixPath = ? WHERE hash = ?');
         /** @type {function(oldHash: string, newHash: string, newNixPath: string): void} */
         this.updateEntityHash = (oldHash, newHash, newNixPath) => updateEntityHash(newHash, newNixPath, oldHash);
+        /** @type {function(oldNixPath: string, newNixPath: string): {deletedHashes: string[], slimEntities: DBSlimEntity[]}} */
+        this.updateEntityPathsReturningChanges = Util.prepTransaction(db, (oldNixPath, newNixPath) => {
+            const entities = this.selectAllEntitiesByPathPrefix(oldNixPath);
+            const deletedHashes = new Array(entities.length);
+            const slimEntities = new Array(entities.length);
+            for (let i = 0; i < entities.length; ++i) {
+                const entity = entities[i];
+                const oldHash = entity.hash;
+                const newPath = `${newNixPath}${entity.nixPath.substring(oldNixPath.length)}`;
+                const newHash = Util.getFileHash(newPath);
+                this.updateEntityHash(oldHash, newHash, newPath);
+
+                deletedHashes[i] = oldHash;
+                slimEntities[i] = {id: entity.id, hash: newHash};
+            }
+            return {deletedHashes, slimEntities};
+        });
+
+        /** @type {function(id: string): void} */
+        this.deleteEntityById = Util.prepSqlRun(db, 'DELETE FROM entities WHERE id = ?');
+        /** @type {function(ids: string[]): void} */
+        this.deleteMultipleEntitiesByIds = Util.prepTransaction(db, entityIds => {
+            for (const id of entityIds) this.deleteEntityById(id);
+        });
     }
 
     _initTagMethods() {
@@ -161,6 +193,12 @@ class EnvironmentRepo {
         /** @type {function(entityIds: string[], tagIds: string[]): void} */
         this.deleteMultipleEntityTags = Util.prepTransaction(db, (entityIds, tagIds) => {
             for (const entId of entityIds) for (const tagId of tagIds) this.deleteEntityTag(entId, tagId);
+        });
+        /** @type {function(entityId: string): void} */
+        this.deleteEntityTagByEntityId = Util.prepSqlRun(db, 'DELETE FROM entity_tags WHERE entityId = ?');
+        /** @type {function(entityIds: string[]): void} */
+        this.deleteMultipleEntityTagsByEntityIds = Util.prepTransaction(db, entityIds => {
+            for (const entId of entityIds) this.deleteEntityTagByEntityId(entId);
         });
     }
 

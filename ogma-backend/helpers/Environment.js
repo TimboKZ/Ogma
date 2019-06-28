@@ -9,13 +9,14 @@ const path = require('path');
 const fs = require('fs-extra');
 const trash = require('trash');
 const upath = require('upath');
+const Denque = require('denque');
 const Promise = require('bluebird');
 const {shell} = require('electron');
 
 const Util = require('./Util');
 const EnvironmentRepo = require('./db/EnvironmentRepo');
 const ThumbnailManager = require('./ThumbnailManager');
-const {OgmaEnvFolder, BackendEvents, EnvProperty, Colors, ThumbnailState} = require('../../shared/typedef');
+const {OgmaEnvFolder, BackendEvents, EnvProperty, Colors, FileErrorStatus, ThumbnailState} = require('../../shared/typedef');
 
 const logger = Util.getLogger();
 
@@ -216,15 +217,45 @@ class Environment {
 
     /**
      * @param {object} data
-     * @param {string[]} data.hashes File hashes which must come from known entities.
+     * @param {string[]} data.entityIds Entity IDs for each file details will be fetched.
+     * @returns {Promise.<(FileDetails||FileErrorStatus)[]>}
      */
     getEntityFiles(data) {
-        const nixPaths = this.envRepo.selectEntityPathsByHashes(data.hashes);
+        const nixPaths = this.envRepo.selectEntityPathsByIds(data.entityIds);
         const filePromises = new Array(nixPaths.length);
+        const badEntityIdQueue = new Denque();
         for (let i = 0; i < nixPaths.length; ++i) {
-            filePromises[i] = this.getFileDetails({path: nixPaths[i]});
+            const nixPath = nixPaths[i];
+            if (!nixPath) {
+                filePromises[i] = Promise.resolve(FileErrorStatus.EntityDoesntExist);
+                continue;
+            }
+            filePromises[i] = this.getFileDetails({path: nixPath})
+                .catch(error => {
+                    if (error.code && error.code === 'ENOENT') {
+                        const badEntityId = data.entityIds[i];
+                        badEntityIdQueue.push(badEntityId);
+                        logger.warn(`Deleting entity '${badEntityId}' - could not find its file at ${nixPath}.`);
+                        return FileErrorStatus.FileDoesntExist;
+                    }
+                    throw error;
+                });
         }
-        return Promise.all([Promise.all(filePromises)]);
+        return Promise.all([Promise.all(filePromises)])
+            .then(fileDetails => {
+                this.removeEntitiesSync({entityIds: badEntityIdQueue.toArray()});
+                return fileDetails;
+            });
+    }
+
+    /**
+     * @param {object} data
+     * @param {string[]} data.entityIds Entity IDs for each file details will be fetched.
+     */
+    removeEntitiesSync(data) {
+        this.envRepo.deleteMultipleEntityTagsByEntityIds(data.entityIds);
+        this.envRepo.deleteMultipleEntitiesByIds(data.entityIds);
+        this.emitter.emit(BackendEvents.EnvRemoveEntities, {id: this.id, entityIds: data.entityIds});
     }
 
     /**
@@ -337,19 +368,27 @@ class Environment {
                 const oldHash = Util.getFileHash(oldNixPath);
                 const newNixPath = Util.getEnvNixPath(data.newPath);
                 const newHash = Util.getFileHash(newNixPath);
-                const entityId = this.envRepo.selectEntityIdByHash(oldHash);
-                if (entityId) this.envRepo.updateEntityHash(oldHash, newHash, newNixPath);
 
-                const promises = [fs.rename(oldPath, newPath), this.thumbManager.removeThumbnail({hash: oldHash})];
-                return Promise.all(promises)
+                return fs.rename(oldPath, newPath)
                     .then(() => this.getFileDetails({path: newNixPath}))
                     .then(fileDetails => {
-                        this.emitter.emit(BackendEvents.EnvAddFiles, {id: this.id, files: [fileDetails]});
-                        if (entityId) {
-                            const slimEntities = [{id: entityId, hash: newHash}];
-                            this.emitter.emit(BackendEvents.EnvUpdateEntities, {id: this.id, entities: slimEntities});
-                        }
-                        this.emitter.emit(BackendEvents.EnvRemoveFiles, {id: this.id, hashes: [oldHash]});
+                        let thumbPromise;
+                        if (fileDetails.isDir) thumbPromise = this.thumbManager.removeDirectory({nixPath: fileDetails.nixPath});
+                        else thumbPromise = this.thumbManager.removeThumbnail({hash: oldHash});
+                        thumbPromise.catch(error => logger.error('Error occurred while deleting thumbnails.', error));
+
+                        // Update hash of the current entity
+                        if (fileDetails.entityId) this.envRepo.updateEntityHash(oldHash, newHash, newNixPath);
+
+                        // Update hashes and paths of all affected child entities
+                        const {deletedHashes, slimEntities} =
+                            this.envRepo.updateEntityPathsReturningChanges(oldNixPath, newNixPath);
+                        deletedHashes.push(oldHash);
+
+                        // Emit relevant events
+                        this.emitter.emit(BackendEvents.EnvRemoveFiles, {id: this.id, hashes: deletedHashes});
+                        this.emitter.emit(BackendEvents.EnvAddFiles, {id: this.id, file: fileDetails});
+                        this.emitter.emit(BackendEvents.EnvUpdateEntities, {id: this.id, entities: slimEntities});
                     });
             });
     }
