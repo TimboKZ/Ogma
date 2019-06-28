@@ -102,6 +102,14 @@ class Util {
         return stmt.run.bind(stmt);
     }
 
+    /**
+     * @param {Database} db
+     * @param {function(*): *} transactionFunc
+     */
+    static prepTransaction(db, transactionFunc) {
+        return db.transaction(transactionFunc);
+    }
+
 }
 
 module.exports = Util;

@@ -11,9 +11,9 @@ const trash = require('trash');
 const upath = require('upath');
 const Promise = require('bluebird');
 const {shell} = require('electron');
-const Database = require('better-sqlite3');
 
 const Util = require('./Util');
+const EnvironmentRepo = require('./db/EnvironmentRepo');
 const ThumbnailManager = require('./ThumbnailManager');
 const {OgmaEnvFolder, BackendEvents, EnvProperty, Colors, ThumbnailState} = require('../../shared/typedef');
 
@@ -38,6 +38,7 @@ class Environment {
         this.dirName = path.basename(this.path);
         this.confDir = path.join(this.path, OgmaEnvFolder);
         this.dbPath = path.join(this.confDir, 'data.sqlite3');
+        this.envRepo = new EnvironmentRepo({dbPath: this.dbPath});
 
         this.thumbsDir = path.join(this.confDir, 'thumbnails');
         const thumbsDbPath = path.join(this.confDir, 'thumbs.sqlite3');
@@ -66,102 +67,14 @@ class Environment {
     }
 
     _prepareDb() {
-        this.db = new Database(this.dbPath);
-        const db = this.db;
-        db.pragma('foreign_keys = on');
-
-        // Create tables for all necessary data
-        db.exec('CREATE TABLE IF NOT EXISTS properties (name TEXT PRIMARY KEY, value TEXT)');
-        db.exec('CREATE TABLE IF NOT EXISTS entities (id TEXT PRIMARY KEY, hash TEXT UNIQUE, nixPath TEXT UNIQUE)');
-        db.exec(`CREATE TABLE IF NOT EXISTS tags
-                 (
-                     id    TEXT PRIMARY KEY,
-                     name  TEXT,
-                     color TEXT
-                 )`);
-        db.exec(`CREATE TABLE IF NOT EXISTS entity_tags
-                 (
-                     entityId TEXT,
-                     tagId    TEXT,
-                     UNIQUE (entityId, tagId),
-                     FOREIGN KEY (entityId) REFERENCES entities (id),
-                     FOREIGN KEY (tagId) REFERENCES tags (id)
-                 )`);
-
-        // Setup get and set commands
-        this._setProperty = Util.prepSqlRun(db, 'REPLACE INTO properties VALUES (?, ?)');
-        this._getProperty = Util.prepSqlGet(db, 'SELECT value FROM properties WHERE name = ?', true);
-
-        this._selectAllEntities = Util.prepSqlAll(db, 'SELECT * FROM entities');
-        this._selectAllEntityIDsAndTagIDs = db.transaction(() => {
-            const fullEntities = this._selectAllEntities();
-            const slimEntities = new Array(fullEntities.length);
-            for (let i = 0; i < fullEntities.length; ++i) {
-                const entity = fullEntities[i];
-                slimEntities[i] = {
-                    id: entity.id,
-                    hash: entity.hash,
-                    tagIds: this._selectTagIdsByEntityId(entity.id),
-                };
-            }
-            return slimEntities;
-        });
-        this._selectEntityIdByHash = Util.prepSqlGet(db, 'SELECT id FROM entities WHERE hash = ?', true);
-        this._selectEntityPathByHash = Util.prepSqlGet(db, 'SELECT nixPath FROM entities WHERE hash = ?', true);
-        this._selectEntityPathsByHashes = db.transaction(hashes => {
-            const nixPaths = new Array(hashes.length);
-            for (let i = 0; i < hashes.length; ++i) nixPaths[i] = this._selectEntityPathByHash(hashes[i]);
-            return nixPaths;
-        });
-        this._insertEntity = Util.prepSqlRun(db, 'INSERT INTO entities VALUES(?, ?, ?)');
-        this._insertMultipleEntities = db.transaction((entities) => {
-            for (const entity of entities) this._insertEntity(...entity);
-        });
-        const _updateEntityHash = Util.prepSqlRun(db, 'UPDATE entities SET hash = ?, nixPath = ? WHERE hash = ?');
-        this._updateEntityHash = (oldHash, newHash, newNixPath) => _updateEntityHash(newHash, newNixPath, oldHash);
-
-        this._selectAllTags = Util.prepSqlAll(db, 'SELECT * FROM tags');
-        this._selectTagById = Util.prepSqlGet(db, 'SELECT * FROM tags WHERE id = ?');
-        this._selectTagIdByName = Util.prepSqlGet(db, 'SELECT id FROM tags WHERE name = ? COLLATE NOCASE LIMIT 1', true);
-        this._selectMultipleTagIdsByNames = db.transaction(names => {
-            const tagIds = new Array(names.length);
-            const missingIndices = [];
-            for (let i = 0; i < names.length; ++i) {
-                tagIds[i] = this._selectTagIdByName(names[i]);
-                if (!tagIds[i]) missingIndices.push(i);
-            }
-            return {tagIds, missingIndices};
-        });
-        this._insertTag = Util.prepSqlRun(db, 'INSERT INTO tags VALUES(?, ?, ?)');
-        this._insertMultipleTags = db.transaction(tags => {
-            for (const tag of tags) {
-                this._insertTag(tag.id, tag.name, tag.color);
-            }
-        });
-        this._setEntityTag = Util.prepSqlRun(db, 'REPLACE INTO entity_tags VALUES (?, ?)');
-        this._setMultipleEntityTags = db.transaction((entityIds, tagIds) => {
-            for (const entId of entityIds) for (const tagId of tagIds) this._setEntityTag(entId, tagId);
-        });
-        this._selectEntityIdsByTagId = Util.prepSqlAll(db, 'SELECT entityId FROM entity_tags WHERE tagId = ?', true);
-        this._selectTagIdsByEntityId = Util.prepSqlAll(db, 'SELECT tagId FROM entity_tags WHERE entityId = ?', true);
-        this._selectEntityIdAndTagIdsByFileHash = hash => {
-            const entityId = this._selectEntityIdByHash(hash);
-            let tagIds;
-            if (!entityId) tagIds = [];
-            else tagIds = this._selectTagIdsByEntityId(entityId);
-            return {entityId, tagIds};
-        };
-        this._deleteEntityTag = Util.prepSqlRun(db, 'DELETE FROM entity_tags WHERE entityId = ? AND tagId=  ?');
-        this._deleteMultipleEntityTags = db.transaction((entityIds, tagIds) => {
-            for (const entId of entityIds) for (const tagId of tagIds) this._deleteEntityTag(entId, tagId);
-        });
+        this.envRepo.init();
 
         // Load environment properties
         const getEnvProperty = (property, defaultValueFunc) => {
-            let value = this._getProperty(property);
+            let value = this.envRepo.getProperty(property);
             if (value === undefined || value === '') {
                 const defaultValue = defaultValueFunc();
-                this._setProperty(property, defaultValue);
+                this.envRepo.setProperty(property, defaultValue);
                 value = defaultValue;
             }
             return value;
@@ -180,7 +93,7 @@ class Environment {
         for (const key of Object.keys(data)) {
             if (!EnvProperty[key]) return;
             const value = data[key];
-            this._setProperty(key, value);
+            this.envRepo.setProperty(key, value);
             this[key] = value;
         }
 
@@ -219,17 +132,17 @@ class Environment {
                 for (let i = 0; i < hashes.length; ++i) {
                     const hash = hashes[i];
                     const nixPath = nixPaths[i];
-                    const entityId = this._selectEntityIdByHash(hash);
+                    const entityId = this.envRepo.selectEntityIdByHash(hash);
                     if (entityId) {
                         entityIds[i] = entityId;
                     } else {
                         const id = Util.getShortId();
-                        entities.push([id, hash, nixPath]);
+                        entities.push({id, hash, nixPath});
                         entityIds[i] = id;
                         slimEntities.push({id, hash});
                     }
                 }
-                this._insertMultipleEntities(entities);
+                this.envRepo.insertMultipleEntities(entities);
 
                 this.emitter.emit(BackendEvents.EnvUpdateEntities, {id: this.id, entities: slimEntities});
                 return entityIds;
@@ -237,7 +150,7 @@ class Environment {
     }
 
     getAllTags() {
-        return this._selectAllTags();
+        return this.envRepo.selectAllTags();
     }
 
     /**
@@ -248,7 +161,7 @@ class Environment {
         return Promise.resolve()
             .then(() => {
                 const tagNames = _.map(data.tagNames, s => s.trim());
-                const {tagIds, missingIndices} = this._selectMultipleTagIdsByNames(tagNames);
+                const {tagIds, missingIndices} = this.envRepo.selectMultipleTagIdsByNames(tagNames);
                 const newTags = new Array(missingIndices.length);
                 for (let i = 0; i < missingIndices.length; ++i) {
                     const id = Util.getTagId();
@@ -260,7 +173,7 @@ class Environment {
                         color: _.sample(Colors),
                     };
                 }
-                this._insertMultipleTags(newTags);
+                this.envRepo.insertMultipleTags(newTags);
                 this.emitter.emit(BackendEvents.EnvAddTags, {id: this.id, tags: newTags});
                 return tagIds;
             });
@@ -282,7 +195,7 @@ class Environment {
         return Promise.all(promises)
             .then(result => {
                 const [entityIds, tagIds] = result;
-                this._setMultipleEntityTags(entityIds, tagIds);
+                this.envRepo.setMultipleEntityTags(entityIds, tagIds);
                 this.emitter.emit(BackendEvents.EnvTagFiles, {id: this.id, entityIds, hashes, tagIds});
             });
     }
@@ -293,12 +206,12 @@ class Environment {
      * @param {string[]} data.entityIds Array of entity IDs from which to remove tags
      */
     removeTagsFromFiles(data) {
-        this._deleteMultipleEntityTags(data.entityIds, data.tagIds);
+        this.envRepo.deleteMultipleEntityTags(data.entityIds, data.tagIds);
         this.emitter.emit(BackendEvents.EnvUntagFiles, {id: this.id, entityIds: data.entityIds, tagIds: data.tagIds});
     }
 
     getAllEntities() {
-        return this._selectAllEntityIDsAndTagIDs();
+        return this.envRepo.selectAllEntityIDsAndTagIDs();
     }
 
     /**
@@ -306,19 +219,18 @@ class Environment {
      * @param {string[]} data.hashes File hashes which must come from known entities.
      */
     getEntityFiles(data) {
-        const nixPaths = this._selectEntityPathsByHashes(data.hashes);
-
+        const nixPaths = this.envRepo.selectEntityPathsByHashes(data.hashes);
         const filePromises = new Array(nixPaths.length);
         for (let i = 0; i < nixPaths.length; ++i) {
             filePromises[i] = this.getFileDetails({path: nixPaths[i]});
         }
-
         return Promise.all([Promise.all(filePromises)]);
     }
 
     /**
      * @param {object} data
      * @param {string} data.path Path relative to environment root
+     * @returns {Promise<FileDetails>}
      */
     getFileDetails(data) {
         const filePath = path.join(this.path, data.path);
@@ -340,9 +252,10 @@ class Environment {
                     }
                 }
 
-                const {entityId, tagIds} = this._selectEntityIdAndTagIdsByFileHash(hash);
+                const {id: entityId, tagIds} = this.envRepo.selectEntityIdAndTagIdsByFileHash(hash);
 
-                return {
+                // noinspection UnnecessaryLocalVariableJS
+                const fileDetails = {
                     hash,
                     nixPath,
                     base: fileData.base,
@@ -354,6 +267,7 @@ class Environment {
                     entityId,
                     thumb: thumbState,
                 };
+                return fileDetails;
             });
     }
 
@@ -417,14 +331,14 @@ class Environment {
                 if (!fs.existsSync(oldPath)) throw new Error(`The original path does not exist: ${oldPath}`);
                 const newPath = path.join(this.path, data.newPath);
                 if (!data.overwrite && fs.existsSync(newPath))
-                    throw new Error(`That new path is already taken! Path: ${newPath}`);
+                    throw new Error(`Path is already taken! Path: ${newPath}`);
 
                 const oldNixPath = Util.getEnvNixPath(data.oldPath);
                 const oldHash = Util.getFileHash(oldNixPath);
                 const newNixPath = Util.getEnvNixPath(data.newPath);
                 const newHash = Util.getFileHash(newNixPath);
-                const entityId = this._selectEntityIdByHash(oldHash);
-                if (entityId) this._updateEntityHash(oldHash, newHash, newNixPath);
+                const entityId = this.envRepo.selectEntityIdByHash(oldHash);
+                if (entityId) this.envRepo.updateEntityHash(oldHash, newHash, newNixPath);
 
                 const promises = [fs.rename(oldPath, newPath), this.thumbManager.removeThumbnail({hash: oldHash})];
                 return Promise.all(promises)
@@ -485,8 +399,8 @@ class Environment {
     }
 
     close() {
+        this.envRepo.close();
         this.thumbManager.close();
-        this.db.close();
     }
 
 }

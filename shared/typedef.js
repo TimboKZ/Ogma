@@ -30,6 +30,38 @@
  * @property {object} socket
  */
 
+// DB type definitions ====================================================
+/**
+ * @typedef {object} DBEntity
+ * @property {string} id
+ * @property {string} hash
+ * @property {string} nixPath
+ */
+/**
+ * @typedef {object} DBSlimEntity
+ * @property {string} id
+ * @property {string} hash
+ * @property {string[]} tagIds
+ */
+/**
+ * @typedef {object} DBTag
+ * @property {string} id
+ * @property {string} name
+ * @property {string} color
+ */
+
+/**
+ * @typedef {object} FileDetails
+ * @property {string} hash
+ * @property {string} nixPath
+ * @property {string} base
+ * @property {string} ext
+ * @property {boolean} isDir
+ * @property {string[]} tagIds
+ * @property {string} [entityId]
+ * @property {ThumbnailState} thumb
+ */
+
 const OgmaEnvFolder = '.ogma-env';
 /** @enum {string} BackendEvents */
 const BackendEvents = {
@@ -267,6 +299,7 @@ const ColorsDark = [
     '#8f3d44',
 ];
 
+/** @enum {number} ThumbnailState **/
 const ThumbnailState = {
     Impossible: 0,
     Possible: 1,
