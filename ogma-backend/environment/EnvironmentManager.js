@@ -7,7 +7,7 @@
 const Promise = require('bluebird');
 const {dialog} = require('electron');
 
-const Util = require('./Util');
+const Util = require('../helpers/Util');
 const Environment = require('./Environment');
 const {BackendEvents} = require('../../shared/typedef');
 

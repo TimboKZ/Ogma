@@ -15,8 +15,8 @@ const EventEmitter2 = require('eventemitter2').EventEmitter2;
 
 const Util = require('./helpers/Util');
 const Config = require('./helpers/Config');
-const Server = require('./helpers/Server');
-const EnvironmentManager = require('./helpers/EnvironmentManager');
+const Server = require('./Server');
+const EnvironmentManager = require('./environment/EnvironmentManager');
 
 const logger = Util.getLogger();
 

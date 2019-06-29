@@ -13,9 +13,9 @@ const Denque = require('denque');
 const Promise = require('bluebird');
 const {shell} = require('electron');
 
-const Util = require('./Util');
-const EnvironmentRepo = require('./db/EnvironmentRepo');
-const ThumbnailManager = require('./ThumbnailManager');
+const Util = require('../helpers/Util');
+const EnvironmentRepo = require('../db/EnvironmentRepo');
+const ThumbnailManager = require('../fs/ThumbnailManager');
 const {OgmaEnvFolder, BackendEvents, EnvProperty, Colors, FileErrorStatus, ThumbnailState} = require('../../shared/typedef');
 
 const logger = Util.getLogger();
@@ -30,19 +30,23 @@ class Environment {
      * @param {boolean} [data.allowCreate]
      */
     constructor(data) {
-        this.ogmaCore = data.ogmaCore;
-        this.emitter = this.ogmaCore.emitter;
+        // Instance variables
         this.path = data.path;
-        this.envManager = data.envManager;
         this.allowCreate = !!data.allowCreate;
-
         this.dirName = path.basename(this.path);
         this.confDir = path.join(this.path, OgmaEnvFolder);
         this.dbPath = path.join(this.confDir, 'data.sqlite3');
-        this.envRepo = new EnvironmentRepo({environment: this, dbPath: this.dbPath});
-
         this.thumbsDir = path.join(this.confDir, 'thumbnails');
         const thumbsDbPath = path.join(this.confDir, 'thumbs.sqlite3');
+
+        // References passed from parent
+        this.ogmaCore = data.ogmaCore;
+        this.envManager = data.envManager;
+        this.emitter = this.ogmaCore.emitter;
+
+        //
+        this.envRepo = new EnvironmentRepo({environment: this, dbPath: this.dbPath});
+
         this.thumbManager = new ThumbnailManager({
             environment: this,
             thumbsDir: this.thumbsDir,

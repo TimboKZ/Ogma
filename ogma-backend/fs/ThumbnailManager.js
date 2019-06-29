@@ -14,7 +14,7 @@ const ExactTrie = require('exact-trie');
 const Database = require('better-sqlite3');
 const childProcess = require('child_process');
 
-const Util = require('./Util');
+const Util = require('../helpers/Util');
 const {BackendEvents, ThumbnailState, VideoExtensions, ImageExtensions} = require('../../shared/typedef');
 
 const thumbExtsTrie = new ExactTrie();

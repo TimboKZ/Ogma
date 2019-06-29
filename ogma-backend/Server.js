@@ -11,9 +11,10 @@ const path = require('path');
 const Denque = require('denque');
 const express = require('express');
 const socketIO = require('socket.io');
-const IpcModule = require('../../shared/IpcModule');
 
-const Util = require('./Util');
+const IpcModule = require('../shared/IpcModule');
+
+const Util = require('./helpers/Util');
 
 const logger = Util.getLogger();
 

@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const Database = require('better-sqlite3');
 
-const Util = require('../Util');
+const Util = require('../helpers/Util');
 
 const logger = Util.getLogger();
 const LatestDbVersion = 1;
