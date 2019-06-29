@@ -27,9 +27,10 @@
 /** @typedef {EventEmitter2} EventEmitter */
 /** @typedef {BetterSqlite3.Database} Database */
 /**
- * @typedef {string} AbsPath
- * @typedef {string} RelPath
- * @typedef {string} AnyPath
+ * @typedef {string} AbsPath Absolute FS path, can be OS-specific
+ * @typedef {string} RelPath Relative FS path, can be OS-specific
+ * @typedef {string} EnvPath Path relative to environment root, can be OS-specific
+ * @typedef {string} NixPath Unix-style path relative to environment root
  */
 
 
@@ -42,15 +43,17 @@ const BackendEvents = {
     UpdateEnvSummaries: 'update-env-summaries',
     UpdateEnvSummary: 'update-env-summary',
 
-    EnvAddTags: 'env-add-tags',
     EnvAddEntities: 'env-add-ent',
     EnvRemoveEntities: 'env-remove-ent',
     EnvUpdateEntities: 'env-upd-ent',
+
     EnvAddFiles: 'env-add-files',
+    EnvRemoveFiles: 'env-remove-files',
+    EnvUpdateThumbs: 'env-thumb-updates',
+
+    EnvAddTags: 'env-add-tags',
     EnvTagFiles: 'env-tag-files',
     EnvUntagFiles: 'env-untag-files',
-    EnvRemoveFiles: 'env-remove-files',
-    EnvThumbUpdates: 'env-thumb-updates',
 };
 
 
@@ -87,7 +90,8 @@ const BackendEvents = {
  * @property {boolean} isDir
  * @property {string[]} tagIds
  * @property {string} [entityId]
- * @property {ThumbnailState} thumb
+ * @property {string} [thumbName]
+ * @property {ThumbnailState} thumbState
  */
 /** @enum {number} FileErrorStatus **/
 const FileErrorStatus = {

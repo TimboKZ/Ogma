@@ -17,7 +17,6 @@ class EnvironmentRepo {
 
     /**
      * @param {object} data
-     * @param {Environment} data.environment
      * @param {string} data.dbPath Absolute path to DB file
      */
     constructor(data) {
@@ -52,42 +51,29 @@ class EnvironmentRepo {
 
         // Initialize schema
         this._runSqlFile(this._schemaPath);
-        const _getTableName =
-            Util.prepSqlGet(db, 'SELECT name FROM sqlite_master WHERE type = \'table\' AND name = ?');
-        this._hasTable = tableName => !!_getTableName(tableName);
     }
 
     // noinspection JSMethodCanBeStatic
     _runAutoMigration() {
         const db = this._db;
 
-        const prepareVersionMethods = () => {
-            /** @type {function(): number} */
-            this.getVersion = Util.prepSqlGet(db, 'SELECT version FROM version LIMIT 1', true);
-            /** @type {function(version: number): void} */
-            this._setVersion = Util.prepSqlRun(db, 'REPLACE INTO version VALUES (?)');
-        };
+        /** @type {function(): number} */
+        this.getVersion = Util.prepSqlGet(db, 'SELECT version FROM version LIMIT 1', true);
+        /** @type {function(version: number): void} */
+        this._setVersion = Util.prepSqlRun(db, 'REPLACE INTO version VALUES (?)');
 
-        let version;
-        if (this._hasTable('version')) {
-            prepareVersionMethods();
-            version = this.getVersion();
-            if (!version) {
-                // Must be a newly created table, insert most recent schema.
-                this._setVersion(LatestDbVersion);
-                version = LatestDbVersion;
-            }
-        } else {
-            db.exec('CREATE TABLE IF NOT EXISTS version (version INTEGER PRIMARY KEY)');
-            prepareVersionMethods();
-            version = null;
+        let version = this.getVersion();
+        if (!version) {
+            this._setVersion(1);
+            version = 1;
         }
+
         if (version === LatestDbVersion) return;
         logger.info(`Migrating environment DB file: ${this._dbPath}`);
         logger.info(`Current DB version: ${version}. Latest version: ${LatestDbVersion}.`);
 
         // Alpha -> v1
-        if (!version) {
+        if (version === 0) {
             logger.info('Migrating from alpha to v1...');
             this._runSqlFile(path.join(this._sqlDir, 'm-alpha-1.sql'));
             logger.info('Migrated to v1.');
@@ -144,9 +130,9 @@ class EnvironmentRepo {
             }
             return sinksWithTags;
         });
-        const _selAllEntsByPathPref = Util.prepSqlAll(db, 'SELECT * FROM entities WHERE nixPath LIKE (? || \'%\')');
+        const _selAllEntsByPathPref = Util.prepSqlAll(db, 'SELECT * FROM entities WHERE nixPath LIKE (? || \'/%\')');
         /** @type {function(nixPathPrefix: string): DBEntity[]} */
-        this.selectAllEntitiesByPathPrefix = nixPathPrefix => _selAllEntsByPathPref(nixPathPrefix).map(_parseEntityBoolean);
+        this.selectAllEntitiesByDir = nixPathPrefix => _selAllEntsByPathPref(nixPathPrefix).map(_parseEntityBoolean);
         /** @type {function(): DBSlimEntity[]} */
         this.selectAllEntityIDsAndTagIDs = Util.prepTransaction(db, () => {
             const fullEntities = this.selectAllEntities();
@@ -197,15 +183,15 @@ class EnvironmentRepo {
         /** @type {function(oldHash: string, newHash: string, newNixPath: string): void} */
         this.updateEntityHash = (oldHash, newHash, newNixPath) => updateEntityHash(newHash, newNixPath, oldHash);
         /** @type {function(oldNixPath: string, newNixPath: string): {deletedHashes: string[], slimEntities: DBSlimEntity[]}} */
-        this.updateEntityPathsReturningChanges = Util.prepTransaction(db, (oldNixPath, newNixPath) => {
-            const entities = this.selectAllEntitiesByPathPrefix(oldNixPath);
+        this.updateChildEntityPathsWithDiff = Util.prepTransaction(db, (oldNixPath, newNixPath) => {
+            const entities = this.selectAllEntitiesByDir(oldNixPath);
             const deletedHashes = new Array(entities.length);
             const slimEntities = new Array(entities.length);
             for (let i = 0; i < entities.length; ++i) {
                 const entity = entities[i];
                 const oldHash = entity.hash;
                 const newPath = `${newNixPath}${entity.nixPath.substring(oldNixPath.length)}`;
-                const newHash = Util.getFileHash(newPath);
+                const newHash = Util.fileHash(newPath);
                 this.updateEntityHash(oldHash, newHash, newPath);
 
                 deletedHashes[i] = oldHash;
@@ -255,6 +241,7 @@ class EnvironmentRepo {
 
         /** @type {function(id: string): string[]} */
         this.selectTagIdsByEntityId = Util.prepSqlAll(db, 'SELECT tagId FROM entity_tags WHERE entityId = ?', true);
+        // TODO: Fix the type mess below - name doesn't match return value, which doesn't match JSDoc...
         /** @type {function(hash: string): DBSlimEntity} */
         this.selectEntityIdAndTagIdsByFileHash = hash => {
             const entityId = this.selectEntityIdByHash(hash);

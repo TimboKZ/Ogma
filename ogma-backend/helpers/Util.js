@@ -48,7 +48,7 @@ class Util {
      * @param {string} nixPath
      * @returns {string}
      */
-    static getFileHash(nixPath) {
+    static fileHash(nixPath) {
         return Util.getMd5(nixPath).substring(0, 12);
     }
 
@@ -63,7 +63,7 @@ class Util {
         return path.normalize(path.join(path.sep, relPath));
     }
 
-    static getEnvNixPath(relPath) {
+    static nixPath(relPath) {
         return upath.normalize(upath.join(upath.sep, relPath));
     }
 

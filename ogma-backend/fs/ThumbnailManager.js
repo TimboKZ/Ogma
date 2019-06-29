@@ -9,6 +9,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const upath = require('upath');
 const Denque = require('denque');
+const shortid = require('shortid');
 const Promise = require('bluebird');
 const ExactTrie = require('exact-trie');
 const Database = require('better-sqlite3');
@@ -21,7 +22,6 @@ const thumbExtsTrie = new ExactTrie();
 for (const ext of VideoExtensions) thumbExtsTrie.put(ext, true, true);
 for (const ext of ImageExtensions) thumbExtsTrie.put(ext, true, true);
 
-// noinspection JSUnusedLocalSymbols
 const logger = Util.getLogger();
 
 class ThumbManager {
@@ -42,47 +42,93 @@ class ThumbManager {
     }
 
     init() {
+        this._initDbAndFs();
+        this._initChildProcess();
+    }
+
+    _initDbAndFs() {
+        const prepareDbMethods = () => {
+            /** @type {function(id: string, hash: string, nixPath: NixPath, epoch: number): void} */
+            this.insertThumb = Util.prepSqlRun(db, 'REPLACE INTO thumbnails VALUES(?, ?, ?, ?)');
+            /** @type {function(hash: string): {id: string, hash: string, nixPath: NixPath, epoch: number}} */
+            this.selectThumbByHash = Util.prepSqlGet(db, 'SELECT * FROM thumbnails WHERE hash = ?');
+            /** @type {function(hash: string): void} */
+            this.deleteThumbByHash = Util.prepSqlRun(db, 'DELETE FROM thumbnails WHERE hash = ?');
+            const updateEntityHash = Util.prepSqlRun(db, 'UPDATE thumbnails SET hash = ?, nixPath = ? WHERE hash = ?');
+            /** @type {function(oldHash: string, newHash: string, newNixPath: NixPath): void} */
+            this.updateThumbHash = (oldHash, newHash, newNixPath) => updateEntityHash(newHash, newNixPath, oldHash);
+
+            this.selectAllThumbsByDir =
+                Util.prepSqlAll(db, 'SELECT * FROM thumbnails WHERE nixPath LIKE (? || \'/%\')');
+            /** @type {function(oldNixPath: NixPath, newNixPath: NixPath): void} */
+            this.updateChildThumbPaths = Util.prepTransaction(db, (oldNixPath, newNixPath) => {
+                const thumbs = this.selectAllThumbsByDir(oldNixPath);
+                for (let i = 0; i < thumbs.length; ++i) {
+                    const entity = thumbs[i];
+                    const oldHash = entity.hash;
+                    const newPath = `${newNixPath}${entity.nixPath.substring(oldNixPath.length)}`;
+                    const newHash = Util.fileHash(newPath);
+                    this.updateThumbHash(oldHash, newHash, newPath);
+                }
+            });
+        };
+
         // Prepare file system structure
         fs.ensureDirSync(this.thumbsDir);
-        this.db = new Database(this.thumbsDbPath);
-        const db = this.db;
-        db.exec(`CREATE TABLE IF NOT EXISTS thumbnails
+        let db = new Database(this.thumbsDbPath);
+
+        try {
+            prepareDbMethods();
+        } catch (error) {
+            logger.error('Error occurred while initialising DB methods for thumbnail manager:', error);
+            logger.error('Resetting thumbnail DB files and images.');
+
+            db.close();
+            fs.unlinkSync(this.thumbsDbPath);
+            fs.emptyDirSync(this.thumbsDir);
+
+            db = new Database(this.thumbsDbPath);
+            db.exec(`CREATE TABLE IF NOT EXISTS thumbnails
                  (
-                     hash    TEXT PRIMARY KEY UNIQUE,
-                     nixPath TEXT,
+                     id      TEXT PRIMARY KEY UNIQUE,
+                     hash    TEXT UNIQUE,
+                     nixPath TEXT UNIQUE,
                      epoch   INTEGER
                  )`);
-        db.exec(`CREATE INDEX IF NOT EXISTS thumb_nix_path ON thumbnails (nixPath)`);
-        this.insertThumb = Util.prepSqlRun(db, 'REPLACE INTO thumbnails VALUES(?, ?, ?)');
-        /** @type {function(string): {hash: string, nixPath: string, epoch: number}} */
-        this.selectThumbByHash = Util.prepSqlGet(db, 'SELECT * FROM thumbnails WHERE hash = ?');
-        this.deleteThumbByHash = Util.prepSqlRun(db, 'DELETE FROM thumbnails WHERE hash = ?');
+            prepareDbMethods();
+        }
+
+
+        this.db = db;
+    }
+
+    _initChildProcess() {
+        this.childProcessReqId = 0;
+        this.childProcessReqMap = {};
+        this.childProcessNixPathMap = {};
+        this.childProcess = childProcess.fork(path.join(__dirname, 'ThumbnailGeneratorProcess.js'));
 
         this.thumbsUpdatesQueue = new Denque();
         this.debounceEmitThumbsUpdate = _.debounce(() => {
             const queue = this.thumbsUpdatesQueue;
             this.thumbsUpdatesQueue = new Denque();
-            this.emitter.emit(BackendEvents.EnvThumbUpdates, {
-                id: this.environment.id,
-                hashes: queue.toArray(),
-                thumb: ThumbnailState.Ready,
-            });
+            const eventData = {id: this.environment.id, thumbs: queue.toArray(), thumbState: ThumbnailState.Ready};
+            console.log(eventData);
+            this.emitter.emit(BackendEvents.EnvUpdateThumbs, eventData);
         }, 100);
 
-        this.childProcessReqId = 0;
-        this.childProcessReqMap = {};
-        this.childProcessNixPathMap = {};
-        this.childProcess = childProcess.fork(path.join(__dirname, 'ThumbnailGeneratorProcess.js'));
-        this.sendChildProcessRequest = (nixPath, filePath, thumbPath) => {
-            if (this.childProcessNixPathMap[nixPath]) return;
-            this.childProcessNixPathMap[nixPath] = true;
+        this.sendChildProcessRequest = (thumbData, filePath, thumbPath) => {
+            if (this.childProcessNixPathMap[thumbData.nixPath]) return;
+            this.childProcessNixPathMap[thumbData.nixPath] = true;
             const reqId = this.childProcessReqId++;
-            this.childProcessReqMap[reqId] = {nixPath, filePath};
+            this.childProcessReqMap[reqId] = {thumbData, filePath};
             this.childProcess.send({reqId, filePath, thumbPath});
         };
+
         this.childProcess.on('message', data => {
             const {reqId, error, result} = data;
-            const {nixPath, filePath} = this.childProcessReqMap[reqId];
+            const {thumbData, filePath} = this.childProcessReqMap[reqId];
+            const {id, hash, nixPath, thumbName} = thumbData;
             delete this.childProcessReqMap[reqId];
             delete this.childProcessNixPathMap[nixPath];
             if (error) {
@@ -95,10 +141,9 @@ class ThumbManager {
             }
 
             // Store thumb data into the database
-            const hash = Util.getFileHash(nixPath);
             const epoch = Math.round(new Date().getTime() / 1000);
-            this.insertThumb(hash, nixPath, epoch);
-            this.thumbsUpdatesQueue.push(hash);
+            this.insertThumb(id, hash, nixPath, epoch);
+            this.thumbsUpdatesQueue.push({hash, thumbName});
             this.debounceEmitThumbsUpdate();
         });
     }
@@ -117,59 +162,75 @@ class ThumbManager {
      * @param {object} data
      * @param {string} data.hash File hash.
      * @param {Stats} data.stats File stats retrieved using `fs.stat()`.
-     * @returns {boolean}
+     * @returns {string|null} Name of the thumbnail file, if it exists.
      */
-    checkThumbnailSync(data) {
+    tryThumbnailSync(data) {
         const {hash, stats} = data;
         const thumbData = this.selectThumbByHash(hash);
 
         // Check if thumbnail was previously generated
-        if (!thumbData) return false;
+        if (!thumbData) return null;
 
         // Check if thumbnail exists only in the database
-        const thumbName = `${hash}.jpg`;
+        const thumbName = `${thumbData.id}.jpg`;
         const thumbPath = path.join(this.thumbsDir, thumbName);
         if (!fs.pathExistsSync(thumbPath)) {
             this.deleteThumbByHash(hash);
-            return false;
+            return null;
         }
 
         // Check if thumbnail is outdated
         if (stats) {
             const fileEpoch = stats.mtimeMs / 1000;
             if (fileEpoch > thumbData.epoch) {
-                return false;
+                return null;
             }
         }
 
         // Return thumb name if everything is ok
-        return true;
+        return thumbName;
     }
 
     /**
      * @param {object} data
-     * @param {string} data.hash File hash.
+     * @param {NixPath} data.oldNixPath
+     * @param {NixPath} data.newNixPath
      */
-    removeThumbnail(data) {
-        const {hash} = data;
-
+    renameFile(data) {
+        const {oldNixPath, newNixPath} = data;
         return Promise.resolve()
             .then(() => {
-                this.deleteThumbByHash(hash);
-
-                const thumbName = `${hash}.jpg`;
-                const thumbPath = path.join(this.thumbsDir, thumbName);
-                return fs.existsSync(thumbPath) ? fs.unlink(thumbPath) : null;
+                const oldHash = Util.fileHash(oldNixPath);
+                const newHash = Util.fileHash(newNixPath);
+                this.updateThumbHash(oldHash, newHash, newNixPath);
+                this.updateChildThumbPaths(oldNixPath, newNixPath);
             });
     }
 
     /**
      * @param {object} data
-     * @param {string} data.nixPath Directory Unix path relative to environment root.
+     * @param {string} data.hash
+     * @param {string} data.nixPath
      */
-    removeDirectory(data) {
-        // TODO: Implement this - removing thumbnails of all children of a directory.
-        return Promise.resolve();
+    removeFile(data) {
+        const {hash, nixPath} = data;
+
+        return Promise.resolve()
+            .then(() => {
+                const thumbData = this.selectThumbByHash(hash);
+                if (thumbData) this.deleteThumbByHash(hash);
+                const thumbs = this.selectAllThumbsByDir(nixPath);
+                if (thumbData) thumbs.push(thumbs);
+
+                const removePromises = new Array(thumbs.length);
+                for (let i = 0; i < thumbs.length; ++i) {
+                    const thumb = thumbs[i];
+                    const thumbName = `${thumb.id}.jpg`;
+                    const thumbPath = path.join(this.thumbsDir, thumbName);
+                    removePromises[i] = fs.existsSync(thumbPath) ? fs.unlink(thumbPath) : null;
+                }
+                return Promise.all(removePromises);
+            });
     }
 
     /**
@@ -184,17 +245,18 @@ class ThumbManager {
 
         const osPath = path.join(this.basePath, data.path);
         const nixPath = upath.toUnix(data.path);
-        const hash = Util.getFileHash(nixPath);
+        const hash = Util.fileHash(nixPath);
 
-        const thumbName = `${hash}.jpg`;
+        const id = shortid.generate();
+        const thumbName = `${id}.jpg`;
         const thumbPath = path.join(this.thumbsDir, thumbName);
 
         return fs.stat(osPath)
-            .then(stats => this.checkThumbnailSync({hash, stats}))
+            .then(stats => this.tryThumbnailSync({hash, stats}))
             .then(thumbExists => {
                 if (thumbExists) return thumbName;
 
-                this.sendChildProcessRequest(nixPath, osPath, thumbPath);
+                this.sendChildProcessRequest({id, hash, nixPath, thumbName}, osPath, thumbPath);
                 return true;
             });
     }
