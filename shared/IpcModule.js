@@ -202,7 +202,7 @@ class IpcModule {
     }
 
     // noinspection JSUnusedGlobalSymbols
-    getConnectionList() {
+    getClientList() {
         const clients = Object.values(this.clientMap);
         return clients.map(client => ({
             id: client.id,
@@ -316,6 +316,18 @@ class IpcModule {
     /**
      * @param {object} data
      * @param {string} data.id Environment ID
+     * @param {RelPath} data.path Path relative to environment root
+     * @param {string[]} data.cachedHashes Hashes that are assumed to be in this directory
+     * @param {number} data.dirReadTime Time (in seconds) when the directory was initially read
+     */
+    scanDirectoryForChanges(data) {
+      return this.envManager.getEnvironment(data).scanDirectoryForChanges(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
      * @param {string} data.path Relative path of the file (from environment root)
      * @param {ClientDetails} [client]
      */
@@ -336,6 +348,7 @@ class IpcModule {
         return this.envManager.getEnvironment(data).openInExplorer(data);
     }
 
+    // noinspection JSUnusedGlobalSymbols
     /**
      * @param {object} data
      * @param {string} data.id Environment ID
@@ -343,6 +356,16 @@ class IpcModule {
      */
     moveFilesToSink(data) {
         return this.envManager.getEnvironment(data).moveFilesToSinks(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string} data.path Path to the new folder.
+     */
+    createFolder(data) {
+        return this.envManager.getEnvironment(data).createFolder(data);
     }
 
     // noinspection JSUnusedGlobalSymbols
@@ -381,7 +404,7 @@ class IpcModule {
     /**
      * @param {object} data
      * @param {string} data.link
-     * @param {ClientDetails} client
+     * @param {ClientDetails} [client]
      */
     openExternalLink(data, client) {
         if (!client.localClient) throw new Error('Only local clients can open external links!');

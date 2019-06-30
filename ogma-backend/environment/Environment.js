@@ -369,6 +369,7 @@ class Environment {
                     entityId,
                     thumbName,
                     thumbState,
+                    readTime: Util.getTimestamp(),
                 };
                 return fileDetails;
             });
@@ -379,7 +380,7 @@ class Environment {
      * @param {string} data.path Path relative to environment root
      */
     getDirectoryContents(data) {
-        const relDirPath = Util.getEnvPath(data.path);
+        const relDirPath = Util.envPath(data.path);
         const fullDirPath = path.join(this.path, relDirPath);
 
         return fs.readdir(fullDirPath)
@@ -399,6 +400,30 @@ class Environment {
                 return Promise.all([dirPromise, Promise.all(filePromises)]);
             })
             .then(result => ({directory: result[0], files: result[1]}));
+    }
+
+    /**
+     * @param {object} data
+     * @param {RelPath} data.path Path relative to environment root
+     * @param {string[]} data.cachedHashes Hashes that are assumed to be in this directory
+     * @param {number} data.dirReadTime Time (in seconds) when the directory was initially read
+     */
+    scanDirectoryForChanges(data) {
+        return this.fileManager.checkFolder(data)
+            .then(result => {
+                const {deletedHashes, newNixPaths} = result;
+
+                if (deletedHashes.length > 0) {
+                    this.emitter.emit(BackendEvents.EnvRemoveFiles, {id: this.id, hashes: deletedHashes});
+                }
+
+                if (newNixPaths.length === 0) return;
+                const fileDetailsPromises = newNixPaths.map(path => this.getFileDetails({path}));
+                return Promise.all(fileDetailsPromises)
+                    .then(files => {
+                        this.emitter.emit(BackendEvents.EnvAddFiles, {id: this.id, files});
+                    });
+            });
     }
 
     /**
@@ -426,7 +451,7 @@ class Environment {
      * @param {string} data.paths Paths to files that will be sorted to sinks.
      */
     moveFilesToSinks(data) {
-        const normPaths = _.map(data.paths, p => Util.getEnvPath(p));
+        const normPaths = _.map(data.paths, p => Util.envPath(p));
         const nixPaths = _.map(normPaths, p => upath.toUnix(p));
         const hashes = _.map(nixPaths, p => Util.fileHash(p));
         const entities = this.envRepo.selectMultipleEntitiesByHashes(hashes).filter(e => e && !e.isDir);
@@ -479,6 +504,20 @@ class Environment {
 
     /**
      * @param {object} data
+     * @param {string} data.path Path relative to environment root
+     */
+    createFolder(data) {
+        const normPath = Util.envPath(data.path);
+        const nixPath = Util.nixPath(data.path);
+        return this.fileManager.createFolder({path: normPath})
+            .then(() => this.getFileDetails({path: nixPath}))
+            .then(fileDetails => {
+                this.emitter.emit(BackendEvents.EnvAddFiles, {id: this.id, files: [fileDetails]});
+            });
+    }
+
+    /**
+     * @param {object} data
      * @param {EnvPath} data.oldPath Current path to the file.
      * @param {EnvPath} data.newPath New path to the file.
      * @param {boolean} [data.overwrite=false] Whether to overwrite if the new file already exists
@@ -512,7 +551,7 @@ class Environment {
 
                 // Emit relevant events
                 this.emitter.emit(BackendEvents.EnvRemoveFiles, {id: this.id, hashes: deletedHashes});
-                this.emitter.emit(BackendEvents.EnvAddFiles, {id: this.id, file: fileDetails});
+                this.emitter.emit(BackendEvents.EnvAddFiles, {id: this.id, files: [fileDetails]});
                 if (slimEntities) {
                     this.emitter.emit(BackendEvents.EnvUpdateEntities, {id: this.id, entities: slimEntities});
                 }
@@ -525,7 +564,7 @@ class Environment {
      */
     removeFiles(data) {
         const {paths} = data;
-        const normPaths = paths.map(p => Util.getEnvPath(p));
+        const normPaths = paths.map(p => Util.envPath(p));
         const fullPaths = normPaths.map(p => path.join(this.path, p));
         return trash(fullPaths)
             .then(() => {
@@ -562,7 +601,7 @@ class Environment {
     requestThumbnails(data) {
         const promises = new Array(data.paths.length);
         for (let i = 0; i < data.paths.length; ++i) {
-            const normPath = Util.getEnvPath(data.paths[i]);
+            const normPath = Util.envPath(data.paths[i]);
 
             // Request a thumbnail from ThumbnailManager in a separate async branch. Don't make the client wait when
             // it's done.

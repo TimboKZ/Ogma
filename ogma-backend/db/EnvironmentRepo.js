@@ -211,7 +211,7 @@ class EnvironmentRepo {
     _initTagMethods() {
         const db = this._db;
 
-        /** @type {function(): void} */
+        /** @type {function(): DBTag[]} */
         this.selectAllTags = Util.prepSqlAll(db, 'SELECT * FROM tags');
         /** @type {function(name: string): string|null} */
         this.selectTagIdByName = Util.prepSqlGet(db, 'SELECT id FROM tags WHERE name = ? COLLATE NOCASE LIMIT 1', true);

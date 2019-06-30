@@ -24,6 +24,10 @@ class Util {
         return packageInfo.version;
     }
 
+    static getTimestamp() {
+        return Math.round(new Date().getTime() / 1000);
+    }
+
     static getLogger() {
         return Logger;
     }
@@ -59,7 +63,7 @@ class Util {
         return Util.getShortId();
     }
 
-    static getEnvPath(relPath) {
+    static envPath(relPath) {
         return path.normalize(path.join(path.sep, relPath));
     }
 

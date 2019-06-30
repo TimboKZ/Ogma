@@ -22,7 +22,7 @@
  * @property {string} ip
  * @property {boolean} localClient
  * @property {string} userAgent
- * @property {object} socket
+ * @property {object} [socket]
  */
 /** @typedef {EventEmitter2} EventEmitter */
 /** @typedef {BetterSqlite3.Database} Database */
@@ -92,6 +92,7 @@ const BackendEvents = {
  * @property {string} [entityId]
  * @property {string} [thumbName]
  * @property {ThumbnailState} thumbState
+ * @property {number} readTime
  */
 /** @enum {number} FileErrorStatus **/
 const FileErrorStatus = {
