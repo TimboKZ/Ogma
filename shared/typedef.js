@@ -40,7 +40,10 @@ const BackendEvents = {
     AddConnection: 'add-conn',
     RemoveConnection: 'remove-conn',
 
-    UpdateEnvSummaries: 'update-env-summaries',
+    CreateEnvironment: 'create-env',
+    CloseEnvironment: 'close-env',
+
+    ForceUpdateEnvSummaries: 'force-update-env-summaries',
     UpdateEnvSummary: 'update-env-summary',
 
     EnvAddEntities: 'env-add-ent',

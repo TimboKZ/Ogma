@@ -1,13 +1,13 @@
 /**
- * @author v1ndic4te
- * @copyright 2018
- * @licence GPL-3.0
+ * @author Timur Kuzhagaliyev <tim.kuzh@gmail.com>
+ * @copyright 2019
+ * @license GPL-3.0
  */
 
 const _ = require('lodash');
-const {cyan, green, magenta, red, yellow} = require('chalk');
 const Promise = require('bluebird');
 const ExactTrie = require('exact-trie');
+const {cyan, green, magenta, red} = require('chalk');
 
 const SharedUtil = require('./SharedUtil');
 const {BackendEvents} = require('./typedef');

@@ -11,6 +11,7 @@ const Denque = require('denque');
 const Promise = require('bluebird');
 
 const Util = require('../helpers/Util');
+const {OgmaEnvFolder} = require('../../shared/typedef');
 
 class FileManager {
 
@@ -55,6 +56,7 @@ class FileManager {
         const folderFullPath = this._expand(folderRelPath);
         return fs.readdir(folderFullPath)
             .then(fileNames => {
+                fileNames = fileNames.filter(n => n !== OgmaEnvFolder);
                 const envPaths = fileNames.map(n => path.join(folderRelPath, n));
                 const fullPaths = envPaths.map(p => this._expand(p));
                 const statPromises = fullPaths.map(p => fs.lstat(p));

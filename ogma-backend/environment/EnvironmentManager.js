@@ -35,22 +35,24 @@ class EnvironmentManager {
         const openPromises = new Array(openEnvs.length);
         for (let i = 0; i < openEnvs.length; ++i) {
             const envPath = openEnvs[i];
-            openPromises[i] = this.openEnvironment({
-                path: envPath, preventOpenEnvUpdate: true, allowCreate: false,
+            openPromises[i] = this._openEnvironment({
+                path: envPath,
+                allowCreate: false,
             })
-                .catch(error => {
-                    logger.error(`Error occurred while opening environment. Path: ${envPath}`, error);
-                });
+                .catch(error => logger.error(
+                    'Error occurred while opening environment - this environment will be skipped',
+                    `Path: ${envPath}\n`, error,
+                ));
         }
 
         return Promise.all(openPromises)
-            .then(() => this._broadcastSummariesUpdate());
     }
 
     /**
      * @param {object} data
      * @param {string} [data.path] Absolute path to the new environment. If it's not provided, will prompt user to
      *                             choose path.
+     * @returns {Promise.<EnvSummary>}
      */
     createEnvironment(data = {}) {
         let envPath = data.path;
@@ -63,16 +65,22 @@ class EnvironmentManager {
             envPath = choices[0];
         }
 
-        return this.openEnvironment({path: envPath, allowCreate: true});
+        return this._openEnvironment({path: envPath, allowCreate: true})
+            .then(env => {
+                const summary = env.getSummary();
+                this.emitter.emit(BackendEvents.CreateEnvironment, summary);
+                return summary;
+            });
     }
 
     /**
      * @param {object} data
      * @param {string} data.path Absolute path to an environment
-     * @param {boolean} [data.preventOpenEnvUpdate] Whether to update open environments in the config
      * @param {boolean} [data.allowCreate]
+     * @returns {Promise.<Environment>}
+     * @private
      */
-    openEnvironment(data) {
+    _openEnvironment(data) {
         if (this.pathMap[data.path]) throw new Error(`Environment is already open! Path: ${data.path}`);
 
         let env;
@@ -81,7 +89,8 @@ class EnvironmentManager {
                 env = new Environment({
                     ogmaCore: this.ogmaCore,
                     path: data.path,
-                    envManager: this, allowCreate: data.allowCreate,
+                    envManager: this,
+                    allowCreate: data.allowCreate,
                 });
                 return env.init();
             })
@@ -94,9 +103,7 @@ class EnvironmentManager {
                 this.pathMap[s.path] = env;
 
                 this.openEnvs.push(env);
-                if (!data.preventOpenEnvUpdate) this._broadcastSummariesUpdate();
-
-                return s;
+                return env;
             });
     }
 
@@ -135,12 +142,7 @@ class EnvironmentManager {
         delete this.pathMap[s.path];
 
         env.close();
-        this._broadcastSummariesUpdate();
-    }
-
-    _broadcastSummariesUpdate() {
-        const envSummaries = this.getSummaries();
-        this.emitter.emit(BackendEvents.UpdateEnvSummaries, envSummaries);
+        this.emitter.emit(BackendEvents.CloseEnvironment, data.id);
     }
 
     /** @returns {EnvSummary[]} */

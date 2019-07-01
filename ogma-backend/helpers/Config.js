@@ -30,7 +30,7 @@ class Config {
     }
 
     setupListeners() {
-        this.emitter.on(BackendEvents.UpdateEnvSummaries, envSummaries => {
+        this.emitter.on(BackendEvents.ForceUpdateEnvSummaries, envSummaries => {
             this.configData.openEnvironments = _.map(envSummaries, s => s.path);
             this.saveConfig();
         });
