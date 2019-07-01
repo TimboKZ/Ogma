@@ -14,6 +14,7 @@ const Promise = require('bluebird');
 const {shell} = require('electron');
 
 const Util = require('../helpers/Util');
+const SinkTree = require('../helpers/SinkTree');
 const FileManager = require('../fs/FileManager');
 const EnvironmentRepo = require('../db/EnvironmentRepo');
 const ThumbnailManager = require('../fs/ThumbnailManager');
@@ -56,7 +57,7 @@ class Environment {
         });
 
         // Data structures for algorithms
-        this.rootSinks = [];
+        this.sinkTree = new SinkTree();
     }
 
     init() {
@@ -98,55 +99,7 @@ class Environment {
 
     _prepareSinkTree() {
         const sinks = this.envRepo.selectAllSinksWithTagIds();
-        const fsTree = {children: {}};
-        for (const sink of sinks) {
-            const {id, nixPath, tagIds} = sink;
-            if (nixPath === '/') continue;
-            const parts = nixPath.substring(1).split('/');
-            if (parts.length === 0) continue;
-            let prevLevel = fsTree;
-            for (let i = 0; i < parts.length; ++i) {
-                const part = parts[i];
-                const lastPart = i === parts.length - 1;
-                let level = prevLevel.children[part];
-                if (!level) {
-                    level = {
-                        tagIds: [],
-                        children: {},
-                    };
-                    prevLevel.children[part] = level;
-                }
-                if (lastPart) {
-                    level.sinkId = id;
-                    level.nixPath = nixPath;
-                }
-                level.tagIds = _.union(level.tagIds, tagIds);
-                prevLevel = level;
-            }
-        }
-
-        const parseRoot = root => {
-            const childDirs = Object.keys(root.children);
-            let sinks = [];
-            for (const dirName of childDirs) {
-                const child = root.children[dirName];
-                const childSinks = parseRoot(child);
-                if (child.tagIds.length > 0) {
-                    const tagMap = {};
-                    for (const tagId of child.tagIds) tagMap[tagId] = true;
-                    sinks.push({
-                        tagMap,
-                        sinkId: child.sinkId,
-                        nixPath: child.nixPath,
-                        sinks: childSinks,
-                    });
-                } else {
-                    sinks = sinks.concat(childSinks);
-                }
-            }
-            return sinks;
-        };
-        this.rootSinks = parseRoot(fsTree);
+        for (const sink of sinks) this.sinkTree.overwriteSink(sink);
     }
 
     setProperty(data) {
@@ -181,40 +134,39 @@ class Environment {
      * @param {object} data
      * @param {string[]} [data.hashes] File hashes
      * @param {string[]} data.nixPaths Array of relative paths of the file (from environment root)
-     * @returns {Promise.<DBSlimEntity[]>}
+     * @returns {Promise.<DBEntity[]>}
      */
-    _getOrDefineSlimEntities(data) {
+    _getOrDefineEntities(data) {
         const nixPaths = data.nixPaths;
         return Promise.resolve()
             .then(() => {
                 const hashes = data.hashes || _.map(nixPaths, Util.fileHash);
                 // TODO: Replace with Denque, cos why not?
                 const entitiesToInsert = [];
-                const newSlimEntities = [];
-                const slimEntities = new Array(hashes.length);
+                const newEntities = [];
+                const entities = new Array(hashes.length);
                 for (let i = 0; i < hashes.length; ++i) {
                     const hash = hashes[i];
                     const nixPath = nixPaths[i];
                     const entity = this.envRepo.selectEntityByHash(hash);
                     if (entity) {
-                        const {id, hash, isDir} = entity;
-                        slimEntities[i] = {id, hash, isDir};
+                        entities[i] = entity;
                     } else {
                         const id = Util.getShortId();
 
                         const filePath = path.join(this.path, nixPath);
                         const isDir = fs.lstatSync(filePath).isDirectory();
 
-                        const slimEntity = {id, hash, isDir};
-                        slimEntities[i] = slimEntity;
-                        newSlimEntities.push(slimEntity);
-                        entitiesToInsert.push({id, hash, nixPath, isDir});
+                        const entity = {id, hash, nixPath, isDir};
+                        entities[i] = entity;
+                        newEntities.push(entity);
+                        entitiesToInsert.push(entity);
                     }
                 }
                 this.envRepo.insertMultipleEntities(entitiesToInsert);
 
-                this.emitter.emit(BackendEvents.EnvUpdateEntities, {id: this.id, entities: newSlimEntities});
-                return slimEntities;
+                this.emitter.emit(BackendEvents.EnvUpdateEntities, {id: this.id, entities: newEntities});
+                return entities;
             });
     }
 
@@ -258,7 +210,7 @@ class Environment {
         const nixPaths = _.map(data.paths, Util.nixPath);
         const hashes = _.map(nixPaths, Util.fileHash);
         const promises = [
-            this._getOrDefineSlimEntities({hashes, nixPaths}),
+            this._getOrDefineEntities({hashes, nixPaths}),
             this._getOrDefineTagIDs({tagNames}),
         ];
         return Promise.all(promises)
@@ -266,9 +218,19 @@ class Environment {
                 const [slimEntities, tagIds] = result;
                 const entityIds = slimEntities.map(e => e.id);
                 this.envRepo.setMultipleEntityTags(entityIds, tagIds);
-                this.emitter.emit(BackendEvents.EnvTagFiles, {id: this.id, entities: slimEntities, tagIds});
 
-                if (_.find(slimEntities, e => e.isDir) !== -1) this._prepareSinkTree();
+                // Update sink tree
+                for (const entity of slimEntities) {
+                    if (!entity.isDir) continue;
+                    this.sinkTree.overwriteSink({
+                        id: entity.id,
+                        nixPath: entity.nixPath,
+                        tagIds,
+                    });
+                }
+
+                // Broadcast update to clients
+                this.emitter.emit(BackendEvents.EnvTagFiles, {id: this.id, entities: slimEntities, tagIds});
             });
     }
 
@@ -279,11 +241,23 @@ class Environment {
      */
     removeTagsFromFiles(data) {
         this.envRepo.deleteMultipleEntityTags(data.entityIds, data.tagIds);
+
+        // Update sink tree
+        const sinks = this.envRepo.selectAllSinksWithTagIdsByIds(data.entityIds);
+        for (const sink of sinks) {
+            this.sinkTree.overwriteSink({
+                id: sink.id,
+                nixPath: sink.nixPath,
+                tagIds: sink.tagIds,
+            });
+        }
+
+        // Broadcast update to clients
         this.emitter.emit(BackendEvents.EnvUntagFiles, {id: this.id, entityIds: data.entityIds, tagIds: data.tagIds});
     }
 
     getAllEntities() {
-        return this.envRepo.selectAllEntityIDsAndTagIDs();
+        return this.envRepo.selectAllEntitiesAndTagIDs();
     }
 
     /**
@@ -456,38 +430,11 @@ class Environment {
         const hashes = _.map(nixPaths, p => Util.fileHash(p));
         const entities = this.envRepo.selectMultipleEntitiesByHashes(hashes).filter(e => e && !e.isDir);
 
-        const getDeepestSink = (sinks, tagIds, depth) => {
-            let bestDepth = 0;
-            let bestSink = null;
-            for (const sink of sinks) {
-                const tagMap = sink.tagMap;
-                let matchedTag = false;
-                if (tagMap) {
-                    for (const tagId of tagIds) {
-                        if (tagMap[tagId]) {
-                            matchedTag = true;
-                            break;
-                        }
-                    }
-                }
-                if (!matchedTag) continue;
-                bestDepth = depth;
-                bestSink = {nixPath: sink.nixPath, depth};
-                const childSink = getDeepestSink(sink.sinks, tagIds, depth + 1);
-                if (!childSink) continue;
-                if (childSink.depth > bestDepth) {
-                    bestDepth = childSink.depth;
-                    bestSink = childSink;
-                }
-            }
-            return bestSink;
-        };
-
         const renamePromises = new Denque();
         for (let i = 0; i < entities.length; ++i) {
             const entity = entities[i];
             const tagIds = this.envRepo.selectTagIdsByEntityId(entity.id);
-            const sink = getDeepestSink(this.rootSinks, tagIds, 1);
+            const sink = this.sinkTree.findBestSink(tagIds);
             if (!sink) continue;
 
             const oldPath = entity.nixPath;

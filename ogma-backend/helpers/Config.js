@@ -14,11 +14,9 @@ class Config {
 
     /**
      * @param {object} data
-     * @param {EventEmitter} data.emitter
      * @param {string} data.configPath Absolute path to the config
      */
     constructor(data) {
-        this.emitter = data.emitter;
         this.configPath = data.configPath;
         this.configData = {};
     }
@@ -26,14 +24,6 @@ class Config {
     init() {
         const configFileExists = this.ensureConfigFile();
         this.loadConfig({loadFromFile: configFileExists});
-        this.setupListeners();
-    }
-
-    setupListeners() {
-        this.emitter.on(BackendEvents.ForceUpdateEnvSummaries, envSummaries => {
-            this.configData.openEnvironments = _.map(envSummaries, s => s.path);
-            this.saveConfig();
-        });
     }
 
     /**
@@ -79,8 +69,19 @@ class Config {
         };
     }
 
+    /**
+     * @returns {AbsPath[]}
+     */
     getOpenEnvironments() {
         return this.configData.openEnvironments;
+    }
+
+    /**
+     * @param {AbsPath[]} paths
+     */
+    setOpenEnvironments(paths) {
+        this.configData.openEnvironments = paths;
+        this.saveConfig();
     }
 }
 

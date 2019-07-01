@@ -120,35 +120,48 @@ class EnvironmentRepo {
         const _selectAllSinks = Util.prepSqlAll(db, 'SELECT * FROM entities WHERE isDir = 1');
         /** @type {function(): DBEntity[]} */
         this.selectAllSinks = () => _selectAllSinks().map(_parseEntityBoolean);
-        /** @type {function(): DBSlimEntity[]} */
+        /** @type {function(): DBEntity[]} */
         this.selectAllSinksWithTagIds = Util.prepTransaction(db, () => {
             const sinks = this.selectAllSinks();
             const sinksWithTags = new Array(sinks.length);
             for (let i = 0; i < sinks.length; ++i) {
                 const sink = sinks[i];
-                sinksWithTags[i] = {...sink, tagIds: this.selectTagIdsByEntityId(sink.id)};
+                sinksWithTags[i] = sink;
+                sinksWithTags[i].tagIds = this.selectTagIdsByEntityId(sink.id);
+            }
+            return sinksWithTags;
+        });
+        /** @type {function(entityIds: string[]): (DBEntity|null)[]} */
+        this.selectAllSinksWithTagIdsByIds = Util.prepTransaction(db, entityIds => {
+            const sinksWithTags = new Array(entityIds.length);
+            for (let i = 0; i < entityIds.length; ++i) {
+                const sink = _parseEntityBoolean(this.selectEntityById(entityIds[i]));
+                if (sink && sink.isDir) {
+                    sinksWithTags[i] = sink;
+                    sinksWithTags[i].tagIds = this.selectTagIdsByEntityId(sink.id);
+                } else {
+                    sinksWithTags[i] = null;
+                }
             }
             return sinksWithTags;
         });
         const _selAllEntsByPathPref = Util.prepSqlAll(db, 'SELECT * FROM entities WHERE nixPath LIKE (? || \'/%\')');
         /** @type {function(nixPathPrefix: string): DBEntity[]} */
         this.selectAllEntitiesByDir = nixPathPrefix => _selAllEntsByPathPref(nixPathPrefix).map(_parseEntityBoolean);
-        /** @type {function(): DBSlimEntity[]} */
-        this.selectAllEntityIDsAndTagIDs = Util.prepTransaction(db, () => {
+        /** @type {function(): DBEntity[]} */
+        this.selectAllEntitiesAndTagIDs = Util.prepTransaction(db, () => {
             const fullEntities = this.selectAllEntities();
-            const slimEntities = new Array(fullEntities.length);
+            const entitiesWithTagIds = new Array(fullEntities.length);
             for (let i = 0; i < fullEntities.length; ++i) {
                 const entity = fullEntities[i];
-                slimEntities[i] = {
-                    id: entity.id,
-                    hash: entity.hash,
-                    isDir: entity.isDir,
-                    tagIds: this.selectTagIdsByEntityId(entity.id),
-                };
+                entitiesWithTagIds[i] = _parseEntityBoolean(entity);
+                entitiesWithTagIds[i].tagIds = this.selectTagIdsByEntityId(entity.id);
             }
-            return slimEntities;
+            return entitiesWithTagIds;
         });
 
+        /** @type {function(id: string): string|null} */
+        this.selectEntityById = Util.prepSqlGet(db, 'SELECT * FROM entities WHERE id = ?');
         /** @type {function(id: string): string|null} */
         this.selectEntityPathById = Util.prepSqlGet(db, 'SELECT nixPath FROM entities WHERE id = ?', true);
         /** @type {function(ids: string[]): string[]} */

@@ -68,12 +68,10 @@ class FileManager {
                     .then(statsArray => {
                         // See https://www.quora.com/What-is-the-difference-between-mtime-atime-and-ctime
                         const newNixPathQueue = new Denque();
-                        console.log('r', data.dirReadTime);
                         for (let i = 0; i < statsArray.length; ++i) {
                             const stats = statsArray[i];
                             const changeTimestamp = stats.ctimeMs / 1000;
                             const changed = changeTimestamp > data.dirReadTime;
-                            console.log('c', Math.round(changeTimestamp), fileNames[i], changed ? 'changed' : 'same');
                             if (changed) {
                                 newNixPathQueue.push(nixPaths[i]);
                             }

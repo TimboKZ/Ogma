@@ -5,7 +5,7 @@
   "description": "Tagging system for large file collections.",
   "main": "./ogma-backend/start-backend.js",
   "scripts": {
-    "start": "electron .",
+    "start": "electron --inspect=5858 .",
     "prod": "cross-env NODE_ENV=production electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",

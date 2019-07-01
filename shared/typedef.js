@@ -42,8 +42,6 @@ const BackendEvents = {
 
     CreateEnvironment: 'create-env',
     CloseEnvironment: 'close-env',
-
-    ForceUpdateEnvSummaries: 'force-update-env-summaries',
     UpdateEnvSummary: 'update-env-summary',
 
     EnvAddEntities: 'env-add-ent',
@@ -67,6 +65,7 @@ const BackendEvents = {
  * @property {string} hash
  * @property {string} nixPath
  * @property {boolean} isDir
+ * @property {string[]} [tagIds]
  */
 /**
  * @typedef {object} DBSlimEntity

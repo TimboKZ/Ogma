@@ -4,6 +4,7 @@
  * @license GPL-3.0
  */
 
+const Denque = require('denque');
 const Promise = require('bluebird');
 const {dialog} = require('electron');
 
@@ -46,6 +47,9 @@ class EnvironmentManager {
         }
 
         return Promise.all(openPromises)
+            .then(() => {
+                this.config.setOpenEnvironments(this.openEnvs.map(e => e.getSummary().path));
+            });
     }
 
     /**
@@ -67,10 +71,32 @@ class EnvironmentManager {
 
         return this._openEnvironment({path: envPath, allowCreate: true})
             .then(env => {
+                this.config.setOpenEnvironments(this.openEnvs.map(e => e.getSummary().path));
+
                 const summary = env.getSummary();
                 this.emitter.emit(BackendEvents.CreateEnvironment, summary);
                 return summary;
             });
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.id
+     */
+    closeEnvironment(data) {
+        const env = this.idMap[data.id];
+        if (!env) throw new Error(`Environment with the specified ID does not exist: "${data.id}".`);
+
+        const s = env.getSummary();
+        delete this.idMap[s.id];
+        delete this.slugMap[s.slug];
+        delete this.pathMap[s.path];
+        const index = _.findIndex(this.openEnvs, e => e.getSummary().id === s.id);
+        if (index > -1) this.openEnvs(index, 1);
+        env.close();
+
+        this.config.setOpenEnvironments(this.openEnvs.map(e => e.getSummary().path));
+        this.emitter.emit(BackendEvents.CloseEnvironment, data.id);
     }
 
     /**
@@ -123,26 +149,9 @@ class EnvironmentManager {
             env = this.slugMap[data.slug];
             if (!env && !data.suppressError) throw new Error(`Environment with slug "${data.slug}" does not exist!`);
         } else {
-            throw new Error(`getEnvironment() was called with specifiny and ID or a slug!`);
+            throw new Error(`getEnvironment() was called with specifying and ID or a slug!`);
         }
         return env;
-    }
-
-    /**
-     * @param {object} data
-     * @param {string} data.id
-     */
-    closeEnvironment(data) {
-        const env = this.idMap[data.id];
-        if (!env) throw new Error(`Environment with the specified ID does not exist: "${data.id}".`);
-
-        const s = env.getSummary();
-        delete this.idMap[s.id];
-        delete this.slugMap[s.slug];
-        delete this.pathMap[s.path];
-
-        env.close();
-        this.emitter.emit(BackendEvents.CloseEnvironment, data.id);
     }
 
     /** @returns {EnvSummary[]} */
