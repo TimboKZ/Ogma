@@ -328,7 +328,8 @@ class Environment {
                     }
                 }
 
-                const {id: entityId, tagIds} = this.envRepo.selectEntityIdAndTagIdsByFileHash(hash);
+                const entityId = this.envRepo.selectEntityIdByHash(hash);
+                const tagIds = entityId ? this.envRepo.selectTagIdsByEntityId(entityId) : [];
 
                 // noinspection UnnecessaryLocalVariableJS
                 const fileDetails = {
@@ -381,8 +382,10 @@ class Environment {
      * @param {RelPath} data.path Path relative to environment root
      * @param {string[]} data.cachedHashes Hashes that are assumed to be in this directory
      * @param {number} data.dirReadTime Time (in seconds) when the directory was initially read
+     * @returns {Promise.<FileDetails>} Directory details
      */
     scanDirectoryForChanges(data) {
+        const dirPromise = this.getFileDetails({path: data.path});
         return this.fileManager.checkFolder(data)
             .then(result => {
                 const {deletedHashes, newNixPaths} = result;
@@ -391,11 +394,12 @@ class Environment {
                     this.emitter.emit(BackendEvents.EnvRemoveFiles, {id: this.id, hashes: deletedHashes});
                 }
 
-                if (newNixPaths.length === 0) return;
+                if (newNixPaths.length === 0) return dirPromise;
                 const fileDetailsPromises = newNixPaths.map(path => this.getFileDetails({path}));
                 return Promise.all(fileDetailsPromises)
                     .then(files => {
                         this.emitter.emit(BackendEvents.EnvAddFiles, {id: this.id, files});
+                        return dirPromise;
                     });
             });
     }

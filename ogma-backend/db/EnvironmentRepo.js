@@ -254,14 +254,6 @@ class EnvironmentRepo {
 
         /** @type {function(id: string): string[]} */
         this.selectTagIdsByEntityId = Util.prepSqlAll(db, 'SELECT tagId FROM entity_tags WHERE entityId = ?', true);
-        // TODO: Fix the type mess below - name doesn't match return value, which doesn't match JSDoc...
-        /** @type {function(hash: string): DBSlimEntity} */
-        this.selectEntityIdAndTagIdsByFileHash = hash => {
-            const entityId = this.selectEntityIdByHash(hash);
-            let tagIds = [];
-            if (entityId) tagIds = this.selectTagIdsByEntityId(entityId);
-            return {id: entityId, hash, tagIds};
-        };
 
         /** @type {function(entityId: string, tagId: string): void} */
         this.setEntityTag = Util.prepSqlRun(db, 'REPLACE INTO entity_tags VALUES (?, ?)');

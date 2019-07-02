@@ -319,6 +319,7 @@ class IpcModule {
      * @param {RelPath} data.path Path relative to environment root
      * @param {string[]} data.cachedHashes Hashes that are assumed to be in this directory
      * @param {number} data.dirReadTime Time (in seconds) when the directory was initially read
+     * @returns {Promise.<FileDetails>} Directory details
      */
     scanDirectoryForChanges(data) {
       return this.envManager.getEnvironment(data).scanDirectoryForChanges(data);
@@ -352,7 +353,7 @@ class IpcModule {
     /**
      * @param {object} data
      * @param {string} data.id Environment ID
-     * @param {string} data.paths Paths to files that will be sorted to sinks.
+     * @param {string[]} data.paths Paths to files that will be sorted to sinks.
      */
     moveFilesToSink(data) {
         return this.envManager.getEnvironment(data).moveFilesToSinks(data);
