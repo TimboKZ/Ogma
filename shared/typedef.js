@@ -53,6 +53,8 @@ const BackendEvents = {
     EnvUpdateThumbs: 'env-thumb-updates',
 
     EnvAddTags: 'env-add-tags',
+    EnvUpdateTags: 'env-update-tags',
+    EnvRemoveTags: 'env-remove-tags',
     EnvTagFiles: 'env-tag-files',
     EnvUntagFiles: 'env-untag-files',
 };

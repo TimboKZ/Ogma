@@ -234,6 +234,26 @@ class IpcModule {
     /**
      * @param {object} data
      * @param {string} data.id Environment ID
+     * @param {DBTag} data.tag New tag definition
+     */
+    updateTag(data) {
+        return this.envManager.getEnvironment({id: data.id}).updateTag(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     * @param {string} data.tagId ID of the tag to delete
+     */
+    removeTag(data) {
+        return this.envManager.getEnvironment({id: data.id}).removeTag(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
      * @param {string[]} data.tagNames Names of tags to add
      * @param {string[]} data.paths Array of relative paths of the file (from environment root)
      */

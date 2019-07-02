@@ -202,6 +202,27 @@ class Environment {
 
     /**
      * @param {object} data
+     * @param {DBTag} data.tag New tag definition
+     */
+    updateTag(data) {
+        const {id, name, color} = data.tag;
+        this.envRepo.updateTag(id, name, color);
+        this.emitter.emit(BackendEvents.EnvUpdateTags, {id: this.id, tags: [data.tag]});
+    }
+
+    /**
+     * @param {object} data
+     * @param {string} data.tagId ID of the tag you want to delete
+     */
+    removeTag(data) {
+        this.envRepo.deleteTagById(data.tagId);
+        ;
+        this.emitter.emit(BackendEvents.EnvRemoveTags, {id: this.id, tagIds: [data.tagId]});
+        // TODO: Update sink tree
+    }
+
+    /**
+     * @param {object} data
      * @param {string[]} data.tagNames Names of tags to add
      * @param {string[]} data.paths Array of relative paths of the file (from environment root)
      */
@@ -245,6 +266,7 @@ class Environment {
         // Update sink tree
         const sinks = this.envRepo.selectAllSinksWithTagIdsByIds(data.entityIds);
         for (const sink of sinks) {
+            if (!sink) continue;
             this.sinkTree.overwriteSink({
                 id: sink.id,
                 nixPath: sink.nixPath,
@@ -298,6 +320,7 @@ class Environment {
      * @param {string[]} data.entityIds Entity IDs for each file details will be fetched.
      */
     removeEntitiesSync(data) {
+        if (data.entityIds.length === 0) return;
         this.envRepo.deleteMultipleEntityTagsByEntityIds(data.entityIds);
         this.envRepo.deleteMultipleEntitiesByIds(data.entityIds);
         this.emitter.emit(BackendEvents.EnvRemoveEntities, {id: this.id, entityIds: data.entityIds});

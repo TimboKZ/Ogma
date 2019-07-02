@@ -239,6 +239,10 @@ class EnvironmentRepo {
             return {tagIds, missingIndices};
         });
 
+        const _updateTag = Util.prepSqlRun(db, 'UPDATE tags SET name = ?, color = ? WHERE id = ?');
+        /** @type {function(id: string, name: string, color: string): void} */
+        this.updateTag = (id, name, color) => _updateTag(name, color, id);
+
         /** @type {function(id: string, name: string, color: string): void} */
         this.insertTag = Util.prepSqlRun(db, 'INSERT INTO tags VALUES(?, ?, ?)');
         /** @type {function(DBTag[]): void} */
@@ -247,6 +251,9 @@ class EnvironmentRepo {
                 this.insertTag(tag.id, tag.name, tag.color);
             }
         });
+
+        /** @type {function(tagId: string): void} */
+        this.deleteTagById = Util.prepSqlRun(db, 'DELETE FROM tags WHERE id = ?');
     }
 
     _initRelationMethods() {
