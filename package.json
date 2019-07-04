@@ -38,9 +38,9 @@
     "@types/fs-extra": "^7.0.0",
     "@types/lodash": "^4.14.132",
     "@types/node": "^8.10.48",
-    "electron": "^3.1.10",
+    "cross-env": "^5.2.0",
     "electron-builder": "^20.40.2",
-    "cross-env": "^5.2.0"
+    "mocha": "^6.1.4"
   },
   "dependencies": {
     "better-sqlite3": "^5.4.0",
@@ -49,6 +49,7 @@
     "chroma-js": "^2.0.3",
     "cors": "^2.8.5",
     "denque": "^1.4.1",
+    "electron": "^3.1.10",
     "electron-is-dev": "^1.1.0",
     "electron-window-state": "^5.0.3",
     "eventemitter2": "^5.0.1",
@@ -56,13 +57,13 @@
     "express": "^4.17.0",
     "fs-extra": "^8.0.1",
     "fs-thumbnail": "^1.0.5",
-    "hamt": "^2.2.2",
+    "jsondiffpatch": "^0.3.11",
     "lodash": "^4.17.11",
+    "sequelize": "^5.9.2",
     "sharp": "^0.22.1",
     "shortid": "^2.2.14",
     "socket.io": "^2.2.0",
     "trash": "^6.0.0",
-    "trie-search": "^1.2.9",
     "ua-parser-js": "^0.7.19",
     "upath": "^1.1.2"
   }

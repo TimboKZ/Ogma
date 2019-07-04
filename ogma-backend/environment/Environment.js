@@ -12,9 +12,10 @@ const upath = require('upath');
 const Denque = require('denque');
 const Promise = require('bluebird');
 const {shell} = require('electron');
+const jsondiffpatch = require('jsondiffpatch');
 
 const Util = require('../helpers/Util');
-const SinkTree = require('../helpers/SinkTree');
+const SinkTree = require('../../shared/SinkTree');
 const FileManager = require('../fs/FileManager');
 const EnvironmentRepo = require('../db/EnvironmentRepo');
 const ThumbnailManager = require('../fs/ThumbnailManager');
@@ -99,7 +100,7 @@ class Environment {
 
     _prepareSinkTree() {
         const sinks = this.envRepo.selectAllSinksWithTagIds();
-        for (const sink of sinks) this.sinkTree.overwriteSink(sink);
+        this.sinkTree.overwriteSinks(sinks);
     }
 
     setProperty(data) {
@@ -113,7 +114,7 @@ class Environment {
             this[key] = value;
         }
 
-        this.emitter.emit(BackendEvents.UpdateEnvSummary, this.getSummary());
+        this.emitter.emit(BackendEvents.EnvUpdateSummary, this.getSummary());
     }
 
     /**
@@ -241,17 +242,24 @@ class Environment {
                 this.envRepo.setMultipleEntityTags(entityIds, tagIds);
 
                 // Update sink tree
-                for (const entity of slimEntities) {
-                    if (!entity.isDir) continue;
-                    this.sinkTree.overwriteSink({
-                        id: entity.id,
-                        nixPath: entity.nixPath,
-                        tagIds,
-                    });
+                const sinks = this.envRepo.selectAllSinksWithTagIdsByIds(entityIds)
+                    .filter(s => !!s)
+                    .map(s => ({id: s.id, nixPath: s.nixPath, tagIds: s.tagIds}));
+                let snapshotBefore = null;
+                if (sinks.length > 0) {
+                    snapshotBefore = this.sinkTree.getSnapshot();
+                    this.sinkTree.overwriteSinks(sinks);
                 }
 
                 // Broadcast update to clients
                 this.emitter.emit(BackendEvents.EnvTagFiles, {id: this.id, entities: slimEntities, tagIds});
+
+                // Broadcast sink tree update
+                if (snapshotBefore) {
+                    const snapshotAfter = this.sinkTree.getSnapshot();
+                    const delta = jsondiffpatch.diff(snapshotBefore, snapshotAfter);
+                    this.emitter.emit(BackendEvents.EnvUpdateSinkTree, {id: this.id, delta});
+                }
             });
     }
 
@@ -264,18 +272,24 @@ class Environment {
         this.envRepo.deleteMultipleEntityTags(data.entityIds, data.tagIds);
 
         // Update sink tree
-        const sinks = this.envRepo.selectAllSinksWithTagIdsByIds(data.entityIds);
-        for (const sink of sinks) {
-            if (!sink) continue;
-            this.sinkTree.overwriteSink({
-                id: sink.id,
-                nixPath: sink.nixPath,
-                tagIds: sink.tagIds,
-            });
+        const sinks = this.envRepo.selectAllSinksWithTagIdsByIds(data.entityIds)
+            .filter(s => !!s)
+            .map(s => ({id: s.id, nixPath: s.nixPath, tagIds: s.tagIds}));
+        let snapshotBefore = null;
+        if (sinks.length > 0) {
+            snapshotBefore = this.sinkTree.getSnapshot();
+            this.sinkTree.overwriteSinks(sinks);
         }
 
         // Broadcast update to clients
         this.emitter.emit(BackendEvents.EnvUntagFiles, {id: this.id, entityIds: data.entityIds, tagIds: data.tagIds});
+
+        // Broadcast sink tree update
+        if (snapshotBefore) {
+            const snapshotAfter = this.sinkTree.getSnapshot();
+            const delta = jsondiffpatch.diff(snapshotBefore, snapshotAfter);
+            this.emitter.emit(BackendEvents.EnvUpdateSinkTree, {id: this.id, delta});
+        }
     }
 
     getAllEntities() {
@@ -445,6 +459,10 @@ class Environment {
         const normPath = path.normalize(path.join(path.sep, data.path));
         const fullPath = path.join(this.path, normPath);
         shell.showItemInFolder(fullPath);
+    }
+
+    getSinkTreeSnapshot() {
+        return this.sinkTree.getSnapshot();
     }
 
     /**

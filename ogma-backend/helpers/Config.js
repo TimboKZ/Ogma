@@ -4,11 +4,9 @@
  * @license GPL-3.0
  */
 
-const _ = require('lodash');
 const fs = require('fs-extra');
 
 const Util = require('./Util');
-const {BackendEvents} = require('../../shared/typedef');
 
 class Config {
 

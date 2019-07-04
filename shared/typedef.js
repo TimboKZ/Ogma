@@ -42,7 +42,7 @@ const BackendEvents = {
 
     CreateEnvironment: 'create-env',
     CloseEnvironment: 'close-env',
-    UpdateEnvSummary: 'update-env-summary',
+    EnvUpdateSummary: 'env-upd-summary',
 
     EnvAddEntities: 'env-add-ent',
     EnvRemoveEntities: 'env-remove-ent',
@@ -57,6 +57,8 @@ const BackendEvents = {
     EnvRemoveTags: 'env-remove-tags',
     EnvTagFiles: 'env-tag-files',
     EnvUntagFiles: 'env-untag-files',
+
+    EnvUpdateSinkTree: 'env-update-sink-tree',
 };
 
 

@@ -4,6 +4,8 @@
  * @license LGPL-3.0
  */
 
+const SharedUtil = require('./SharedUtil');
+
 class SinkTree {
     /**
      * @typedef {object} SinkTreeNode
@@ -20,27 +22,18 @@ class SinkTree {
      * @property {string[]} tagIds
      */
 
-    /**
-     * @param {object} [data]
-     */
-    constructor(data = {}) {
+    constructor() {
         this.fsTree = {
             tagIds: [],
             children: {},
         };
         this.rootSinks = [];
-        this.sinkTree = {
-            tagMap: {},
-            sinkId: null,
-            nixPath: null,
-            sinks: [],
-        };
     }
 
     /**
      * @param {SinkTreeInput} sink
      */
-    overwriteSink(sink) {
+    _overwriteSink(sink) {
         const {id, nixPath, tagIds} = sink;
         if (nixPath === '/') return;
 
@@ -68,7 +61,9 @@ class SinkTree {
             }
             prevLevel = level;
         }
+    }
 
+    _rebuildSinkTree() {
         // Update sink tree
         const parseRoot = root => {
             const childDirs = Object.keys(root.children);
@@ -76,7 +71,7 @@ class SinkTree {
             for (const dirName of childDirs) {
                 const child = root.children[dirName];
                 const childSinks = parseRoot(child);
-                if (child.tagIds.length > 0) {
+                if (child.tagIds && child.tagIds.length > 0) {
                     const tagMap = {};
                     for (const tagId of child.tagIds) tagMap[tagId] = true;
                     sinks.push({
@@ -92,6 +87,14 @@ class SinkTree {
             return sinks;
         };
         this.rootSinks = parseRoot(this.fsTree);
+    }
+
+    /**
+     * @param {SinkTreeInput[]} sinks
+     */
+    overwriteSinks(sinks) {
+        for (const sink of sinks) this._overwriteSink(sink);
+        this._rebuildSinkTree();
     }
 
     /**
@@ -134,6 +137,14 @@ class SinkTree {
      */
     findBestSink(tagIds) {
         return this._getDeepestSink(this.rootSinks, tagIds, 1);
+    }
+
+    getSnapshot() {
+        return SharedUtil.deepClone(this.rootSinks);
+    }
+
+    loadSnapshot(rootSinks) {
+        this.rootSinks = rootSinks;
     }
 
 }

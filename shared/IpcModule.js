@@ -342,7 +342,7 @@ class IpcModule {
      * @returns {Promise.<FileDetails>} Directory details
      */
     scanDirectoryForChanges(data) {
-      return this.envManager.getEnvironment(data).scanDirectoryForChanges(data);
+        return this.envManager.getEnvironment(data).scanDirectoryForChanges(data);
     }
 
     // noinspection JSUnusedGlobalSymbols
@@ -367,6 +367,15 @@ class IpcModule {
     openInExplorer(data, client) {
         if (!client.localClient) throw new Error('Only local clients can open files in explorer!');
         return this.envManager.getEnvironment(data).openInExplorer(data);
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * @param {object} data
+     * @param {string} data.id Environment ID
+     */
+    getSinkTreeSnapshot(data) {
+        return this.envManager.getEnvironment(data).getSinkTreeSnapshot();
     }
 
     // noinspection JSUnusedGlobalSymbols
