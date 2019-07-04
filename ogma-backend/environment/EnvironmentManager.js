@@ -4,7 +4,7 @@
  * @license GPL-3.0
  */
 
-const Denque = require('denque');
+const _ = require('lodash');
 const Promise = require('bluebird');
 const {dialog} = require('electron');
 
@@ -92,7 +92,7 @@ class EnvironmentManager {
         delete this.slugMap[s.slug];
         delete this.pathMap[s.path];
         const index = _.findIndex(this.openEnvs, e => e.getSummary().id === s.id);
-        if (index > -1) this.openEnvs(index, 1);
+        if (index > -1) this.openEnvs.splice(index, 1);
         env.close();
 
         this.config.setOpenEnvironments(this.openEnvs.map(e => e.getSummary().path));
