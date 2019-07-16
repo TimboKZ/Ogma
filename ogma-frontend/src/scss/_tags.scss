@@ -1,0 +1,70 @@
+
+.tag-group {
+    padding: 1px;
+
+    //noinspection CssReplaceWithShorthandSafely
+    &-tag {
+        $color1: #666;
+        $color2: #555;
+        background: repeating-linear-gradient(45deg, $color1, $color1 10px, $color2 10px, $color2 20px);
+
+        box-shadow: inset rgba(0, 0, 0, 0.2) 0 0 0 1px;
+        background-color: #999;
+        vertical-align: bottom;
+        color: #fff !important;
+        display: inline-block;
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 1px;
+
+        &:focus {
+            text-decoration: underline;
+        }
+
+        &-name {
+            display: inline-block;
+            vertical-align: top;
+            font-weight: bold;
+            padding: 1px 4px;
+        }
+
+        &-count {
+            background-color: rgba(0, 0, 0, 0.35);
+            display: inline-block;
+            vertical-align: top;
+            padding: 1px 4px;
+        }
+
+        &-empty {
+            $color1: #c0c0c0;
+            $color2: #ccc;
+            background: repeating-linear-gradient(45deg, $color1, $color1 10px, $color2 10px, $color2 20px);
+            box-shadow: inset rgba(0, 0, 0, 0.05) 0 0 0 1px;
+        }
+
+        &-bad {
+            $color1: #780a0a;
+            $color2: #95170c;
+            background: repeating-linear-gradient(45deg, $color1, $color1 10px, $color2 10px, $color2 20px);
+        }
+
+        &-hidden {
+            opacity: 0.4;
+        }
+
+        &.clickable {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+            cursor: pointer;
+
+            &:hover {
+                box-shadow: inset rgba(0, 0, 0, 0.2) 0 0 0 1px, inset rgba(0, 0, 0, 0.1) 0 100px;
+            }
+            &:active {
+                box-shadow: inset rgba(0, 0, 0, 0.2) 0 0 0 1px, inset rgba(255, 255, 255, 0.1) 0 100px;
+            }
+        }
+    }
+
+}

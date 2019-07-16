@@ -1,0 +1,293 @@
+
+.file {
+    &-explorer {
+        border: solid 1px #dbdbdb;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        flex-direction: column;
+        user-select: none;
+        display: flex;
+        flex-grow: 1;
+
+        .status-bar {
+            border-bottom: solid 1px #dbdbdb;
+            padding: 6px;
+
+            &, * {
+                font-size: 0.9rem;
+            }
+
+            .loading-count {
+                color: #999;
+            }
+
+            .selection-count {
+                color: #53a1ff;
+            }
+
+            .toggle-button {
+                border-radius: 0;
+                &:first-of-type {
+                    border-bottom-left-radius: 3px;
+                    border-top-left-radius: 3px;
+                }
+                &:last-of-type {
+                    border-bottom-right-radius: 3px;
+                    border-top-right-radius: 3px;
+                }
+            }
+        }
+
+        .file-list {
+            will-change: transform;
+            overflow: hidden;
+            flex: 1 1 auto;
+            height: 0;
+            &.view-thumb {
+                //padding: 3px;
+            }
+            &-text {
+                text-align: center;
+                font-size: 1.2rem;
+                padding: 50px;
+            }
+        }
+    }
+    &-entry {
+    }
+}
+
+.file-entry {
+    vertical-align: top;
+    position: relative;
+    font-size: 0.9rem;
+    text-align: left;
+    overflow: hidden;
+    &.view-list {
+        border: none;
+        border-bottom: solid 1px #efefef;
+
+        background: transparent;
+        box-sizing: border-box;
+        padding-left: 3.2rem;
+        border-radius: 0;
+        display: block;
+        color: #2f2f2f;
+        width: 100%;
+        z-index: 1;
+        margin: 0;
+        &.selected {
+            border-bottom: solid 1px #d3d9e9;
+            background-color: #ecedff;
+        }
+    }
+    &.view-thumb {
+        background-color: #999;
+        border: solid 1px #ccc;
+        word-break: break-all;
+        border-radius: 3px;
+        font-size: 0.8rem;
+        height: 150px;
+        width: 250px;
+        margin: 3px;
+    }
+    &.large-thumb {
+        height: 300px;
+        width: 400px;
+    }
+
+    &.selected &-name {
+        color: #09f !important;
+        * {
+            color: #0089de;
+        }
+    }
+
+    &:focus {
+        outline: none;
+    }
+
+    &:focus &-name {
+        text-decoration: underline !important;
+    }
+}
+
+.view-list {
+    .file-entry {
+        &:focus {
+            &:before, &:after {
+                background-color: rgba(15, 129, 204, 0.3);
+                position: absolute;
+                display: block;
+                height: 2px;
+                width: 100%;
+                content: '';
+                left: 0;
+            }
+            &:before {
+                top: 0;
+            }
+            &:after {
+                bottom: 0;
+            }
+        }
+
+        &-thumbnail, &-name, &-tags {
+            vertical-align: center;
+            display: inline-block;
+        }
+
+        &-thumbnail {
+            border-right: solid 1px #efefef;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-color: #fafafa;
+            background-size: contain;
+            position: absolute;
+            z-index: -2;
+            height: 100%;
+            width: 3rem;
+            left: 0;
+            top: 0;
+        }
+
+        &-name {
+            padding: 3px 4px 3px 8px;
+            position: relative;
+            top: 0;
+
+            &-icon {
+                margin-right: 8px;
+                font-size: 1rem;
+            }
+            &-collapse {
+                color: #666;
+            }
+            &-ext {
+                color: #aaa;
+            }
+        }
+
+        &-tags {
+            margin-bottom: -2px;
+            margin-left: 0.5rem;
+            font-size: 0.75rem;
+            position: relative;
+            padding: 0 2px;
+        }
+    }
+}
+
+.view-thumb {
+    .file-entry {
+        &:focus {
+            box-shadow: rgba(15, 129, 204, 0.8) 0 0 1px 3px;
+        }
+
+        &-thumbnail, &-selected, &-tags, &-icon {
+            position: absolute;
+            top: 0;
+        }
+
+        &:hover &-tags {
+            opacity: 0.6;
+        }
+
+        &-thumbnail, &-selected, &-icon {
+            height: 100%;
+            width: 100%;
+        }
+
+        &-thumbnail {
+            -webkit-transition: opacity 0.2s ease;
+            transition: opacity 0.2s ease;
+
+            background-color: rgba(0, 0, 0, 0.5);
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            background-image: none;
+            opacity: 0;
+            z-index: 1;
+
+            &.loaded {
+                opacity: 1;
+            }
+        }
+
+        &-selected {
+            $color1: #09f;
+            $color2: #006ebd;
+            background: repeating-linear-gradient(45deg, $color1, $color1 10px, $color2 10px, $color2 20px);
+
+            opacity: 0.4;
+            z-index: 4;
+        }
+
+        &-tags {
+            -webkit-transition: opacity 0.2s ease;
+            transition: opacity 0.2s ease;
+            max-width: 100%;
+            z-index: 3;
+            bottom: 0;
+            top: auto;
+            left: 0;
+            .tag-group-tag {
+                max-width: calc(100% - 2px);
+            }
+        }
+
+        &-icon {
+            text-align: center;
+            font-size: 2rem;
+            color: #fff;
+            z-index: 2;
+
+            i {
+                position: absolute;
+                height: 100%;
+                width: 100%;
+                left: 0;
+                top: 0;
+            }
+
+            & *:before {
+                transform: translate(-50%, -50%);
+                top: 50% !important;
+                position: absolute;
+            }
+
+            &-content {
+                background-color: rgba(0, 0, 0, 0.7);
+                transform: translate(-50%, -50%);
+                border-radius: 100%;
+                position: absolute;
+                height: 3.4rem;
+                width: 3.4rem;
+                left: 50%;
+                top: 50%;
+            }
+        }
+
+
+        &-name {
+            background-color: rgba(0, 0, 0, 0.8);
+            position: absolute;
+            padding: 4px 8px;
+            color: #fff;
+            width: 100%;
+            z-index: 5;
+            top: 0;
+
+            &-icon {
+                margin-right: 5px;
+            }
+            &-collapse {
+                color: #666;
+            }
+            &-ext {
+                color: #aaa;
+            }
+        }
+    }
+}

@@ -1,0 +1,49 @@
+html, body, .app-loader, #root {
+    overflow-y: auto !important;
+    display: block;
+    height: 100%;
+}
+
+html, body {
+    background-color: #f2f2f2;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+    padding: 20px 20px 0 20px;
+}
+
+.app-loader {
+    position: relative;
+    text-align: center;
+}
+
+.app-loader-content {
+    transform: translate(-50%, -60%);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+}
+
+.app-loader-content img {
+    vertical-align: middle;
+    margin: 0 1rem 0.6rem 0;
+}
+
+.app-loader-logo {
+    font-weight: bold;
+    font-size: 3rem;
+}
+
+.app-loader-message {
+    font-size: 1.2rem;
+    width: 350px;
+}
+
+.app-loader-message.error, .app-loader-message.error * {
+    color: #74272B !important;
+}

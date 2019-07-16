@@ -1,0 +1,143 @@
+
+.env {
+    flex-direction: column;
+    display: flex;
+
+    &-icon {
+        display: inline-block;
+        padding: 0.2em 0.25em;
+        border-radius: 6px;
+        font-size: 0.9em;
+        color: #fff;
+    }
+
+    &-title, &-tabs {
+        //display: inline-block;
+        vertical-align: bottom;
+        //background: red;
+    }
+
+    &-title {
+        border-bottom: solid 1px #dbdbdb;
+        padding: 1px 20px 7px 0;
+        float: left;
+    }
+
+    &-tag {
+        &-top-bar {
+            margin: -1.5rem 0 0 0 !important;
+            padding: 8px 0;
+
+            .level-left {
+                max-width: calc(100% - 120px);
+                .level-item {
+                    max-width: calc(100% - 30px);
+                }
+            }
+
+            .breadcrumb li {
+                a, button {
+                    padding-right: 5px;
+                    padding-left: 5px;
+                }
+                &:first-child {
+                    a, button {
+                        padding-left: 0;
+                    }
+                }
+                &.is-active {
+                    a, button {
+                        pointer-events: none;
+                        cursor: default;
+                        color: #363636;
+                    }
+                }
+            }
+        }
+    }
+
+    &-search {
+        &-top {
+            .column {
+                padding-bottom: 0 !important;
+                padding-top: 0 !important;
+            }
+            .title {
+                margin-bottom: 0.5rem !important;
+            }
+            .is-divider-vertical {
+                padding: 0 1rem;
+                &:before {
+                    border-left-width: 1px;
+                    bottom: 0.5rem;
+                    top: 0.5rem;
+                }
+            }
+            .tag-group-tag {
+                font-size: 0.9rem;
+                margin: 2px;
+            }
+        }
+        &-available {
+            border-radius: 3px;
+            .field {
+                &, .input, .button {
+                    font-size: 0.9rem;
+                }
+            }
+        }
+        &-selected {
+            .tabs {
+                margin: 0 6px;
+                button {
+                    padding: 0.2em 0.5em;
+                    margin-top: -6px;
+                    font-size: 0.9em;
+                }
+            }
+        }
+    }
+
+    &-manage-tags {
+        .level {
+            margin-bottom: 0.7rem;
+            font-size: 0.95em;
+        }
+        .field {
+            &, & .button, & .input {
+                font-size: 0.9em;
+            }
+        }
+        .tabs {
+            display: block !important;
+            margin: 0 6px;
+            button {
+                padding: 0.2em 0.5em;
+                font-size: 0.95em;
+            }
+        }
+        .tag-group-tag {
+            margin: 0 4px 4px 0;
+            &-name {
+                font-weight: 500;
+            }
+        }
+    }
+
+    &-manage-sinks {
+        .box {
+            padding: 0.5rem 1rem;
+        }
+        &-tags {
+            border: solid 1px #ddd;
+            display: inline-block;
+            vertical-align: middle;
+            border-radius: 3px;
+            margin: 0 10px;
+            width: 300px;
+            .react-tags {
+                font-size: 0.9em;
+            }
+        }
+    }
+}

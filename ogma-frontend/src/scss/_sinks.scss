@@ -1,0 +1,40 @@
+
+.sink-viz {
+    display: inline-block;
+    vertical-align: top;
+
+    &-sink {
+        border: solid 1px #ddd;
+        border-left: solid 5px #ccc;
+
+        padding: 3px 1px 1px 6px;
+        vertical-align: top;
+        margin: 0 5px 5px 0;
+        float: left;
+
+        &-top {
+            margin: 0 0 15px 0;
+            display: block;
+            float: none;
+        }
+
+        &-name {
+            padding: 0 3px 2px 0;
+            display: block;
+
+            .icon {
+                color: #999;
+            }
+
+            .tag-group {
+                display: inline-block;
+                margin-left: 3px;
+                font-size: 0.8em;
+            }
+        }
+
+        &-children {
+            padding-top: 5px;
+        }
+    }
+}
