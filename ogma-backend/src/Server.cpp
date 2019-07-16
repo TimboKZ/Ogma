@@ -4,17 +4,20 @@
 // Created by euql1n on 7/14/19.
 //
 
+#include "Util.h"
 #include "Server.h"
 
 using namespace std;
 using namespace Ogma;
 
-Server::Server(Config _config) : config(std::move(_config)) {
-    web_server.config.port = config.web_server_port;
-    web_server.default_resource["GET"] = [this](shared_ptr<HttpServer::Response> response,
-                                                shared_ptr<HttpServer::Request> request) {
+CREATE_LOGGER("[SERV]")
+
+Server::Server(const shared_ptr<Config> &mConfig) : m_config(mConfig) {
+    m_web_server.config.port = m_config->web_server_port;
+    m_web_server.default_resource["GET"] = [this](shared_ptr<HttpServer::Response> response,
+                                                  shared_ptr<HttpServer::Request> request) {
         try {
-            auto web_root_path = config.frontend_build_path;
+            auto web_root_path = m_config->frontend_build_path;
             auto path = boost::filesystem::canonical(web_root_path / request->path);
             // Check if path is within web_root_path
             if (distance(web_root_path.begin(), web_root_path.end()) > distance(path.begin(), path.end()) ||
@@ -22,7 +25,7 @@ Server::Server(Config _config) : config(std::move(_config)) {
                 throw invalid_argument("path must be within root path");
             if (boost::filesystem::is_directory(path))path /= "index.html";
 
-            cout << "Serving file " << path << endl;
+            logger->info(STR("Serving file: " << path));
 
             SimpleWeb::CaseInsensitiveMultimap header;
             header.emplace("Cache-Control", "max-age=86400");
@@ -72,11 +75,12 @@ Server::Server(Config _config) : config(std::move(_config)) {
 }
 
 void Server::start() {
-    thread web_thread([this]() { web_server.start(); });
+    thread web_thread([this]() { m_web_server.start(); });
     web_thread.join();
     this_thread::sleep_for(chrono::seconds(1));
 }
 
 Server::~Server() {
-    web_server.stop();
+    m_web_server.stop();
 }
+

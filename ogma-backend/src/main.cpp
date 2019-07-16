@@ -2,9 +2,12 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
+#include "Util.h"
 #include "Config.h"
 #include "Server.h"
 #include "WebSocket.h"
+#include "Settings.h"
+#include "Library.h"
 
 using namespace std;
 using namespace Ogma;
@@ -15,7 +18,10 @@ const char *param_web_port = "web-port";
 const char *param_socket_port = "socket-port";
 const char *param_frontend = "frontend";
 
+CREATE_LOGGER("[MAIN]")
+
 int main(int ac, char *av[]) {
+    spdlog::set_pattern("%H:%M:%S %n %^%L%$ %v");
 
     // Parse command line options
     po::options_description desc("Allowed options");
@@ -33,34 +39,41 @@ int main(int ac, char *av[]) {
     }
 
     // Prepare config
-    Config config;
+    shared_ptr<Config> config(new Config());
     if (vm.count(param_web_port)) {
-        config.web_server_port = vm[param_web_port].as<int>();
+        config->web_server_port = vm[param_web_port].as<int>();
     } else {
-        std::cout << "Web server port was not specified. Using default." << std::endl;
-        config.web_server_port = 10548;
+        logger->info("Web server port was not specified. Using default.");
+        config->web_server_port = 10548;
     }
     if (vm.count(param_socket_port)) {
-        config.socket_server_port = vm[param_socket_port].as<int>();
+        config->socket_server_port = vm[param_socket_port].as<int>();
     } else {
-        std::cout << "Websocket server port was not specified. Using default." << std::endl;
-        config.socket_server_port = 10549;
+        logger->info("Websocket server port was not specified. Using default.");
+        config->socket_server_port = 10549;
     }
     if (vm.count(param_frontend)) {
-        config.frontend_build_path = fs::canonical(vm[param_frontend].as<string>());
+        config->frontend_build_path = fs::canonical(vm[param_frontend].as<string>());
     } else {
-        std::cout << "Frontend build path was not specified. Aborting." << std::endl;
+        logger->error("Frontend build path was not specified. Aborting.");
         return 2;
     }
 
     // Log effective config
-    std::cout << "Effective config:" << std::endl;
-    std::cout << "  - web server port: " << config.web_server_port << std::endl;
-    std::cout << "  - socket server port: " << config.socket_server_port << std::endl;
-    std::cout << "  - frontend build path: " << config.frontend_build_path << std::endl;
-    std::cout << std::endl;
+    logger->info("Effective config:");
+    logger->info(STR("  - web server port: " << config->web_server_port));
+    logger->info(STR("  - socket server port: " << config->socket_server_port));
+    logger->info(STR("  - frontend build path: " << config->frontend_build_path));
 
-    WebSocket webSocket(config);
+    // Find home directory
+    fs::path ogma_dir; // TODO: Find home dir
+    logger->info(STR("Ogma directory is set to: " << ogma_dir));
+
+    // Prepare pointers
+    shared_ptr<Settings> settings(new Settings(ogma_dir));
+    shared_ptr<Library> library(new Library(settings));
+
+    WebSocket webSocket(config, settings, library);
     Server server(config);
 
     thread broadcast_thread(&WebSocket::process_broadcast_queue, &webSocket);

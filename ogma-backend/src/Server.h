@@ -16,11 +16,11 @@ namespace Ogma {
     class Server {
 
         private:
-            Config config;
-            HttpServer web_server;
+            std::shared_ptr<Config> m_config;
+            HttpServer m_web_server;
 
         public:
-            explicit Server(Config config);
+            explicit Server(const std::shared_ptr<Config> &mConfig);
             virtual ~Server();
             void start();
 

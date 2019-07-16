@@ -9,6 +9,7 @@ set(SQLite3_DIR "${LIB_DIR}/libsqlite3/cmake")
 set(Sqlpp11_DIR "${LIB_DIR}/sqlpp11")
 set(Sqlpp11Sqlite3_DIR "${LIB_DIR}/sqlpp11-connector-sqlite3")
 set(Hashidsxx_DIR "${LIB_DIR}/hashidsxx")
+set(Spdlog_DIR "${LIB_DIR}/spdlog")
 
 find_package(Boost 1.69 COMPONENTS program_options filesystem REQUIRED)
 find_package(SQLite3 REQUIRED)
@@ -20,10 +21,12 @@ include_directories(
         ${Sqlpp11_DIR}/include
         ${Sqlpp11Sqlite3_DIR}/include
         ${Hashidsxx_DIR}
+        ${Spdlog_DIR}/include
 )
 
 add_subdirectory(${Sqlpp11_DIR})
 add_subdirectory(${Sqlpp11Sqlite3_DIR})
+add_subdirectory(${Spdlog_DIR})
 
 file(
         GLOB Lib_SRC
@@ -39,7 +42,8 @@ add_executable(
         src/main.cpp
         src/Server.cpp
         src/WebSocket.cpp
-        src/EnvironmentManager.cpp
+        src/Settings.cpp
+        src/Library.cpp
         ${Lib_SRC}
 )
 target_link_libraries(
@@ -49,4 +53,5 @@ target_link_libraries(
         pthread
         boost_program_options
         boost_filesystem
+        spdlog
 )

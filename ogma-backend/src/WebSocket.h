@@ -13,6 +13,8 @@
 #include <websocketpp/config/asio_no_tls.hpp>
 
 #include "Config.h"
+#include "Settings.h"
+#include "Library.h"
 
 namespace Ogma {
     namespace ws = websocketpp;
@@ -28,7 +30,7 @@ namespace Ogma {
 
     namespace {
         int connectionCount = 0;
-        hashidsxx::Hashids hash_id;
+        hashidsxx::Hashids hash_id; // NOLINT(cert-err58-cpp)
 
         std::string get_client_id() {
             connectionCount++;
@@ -71,7 +73,10 @@ namespace Ogma {
 
     class WebSocket {
         private:
-            Config m_config;
+            std::shared_ptr<Config> m_config;
+            std::shared_ptr<Settings> m_settings;
+            std::shared_ptr<Library> m_library;
+
             SocketServer m_server;
             ConnectionList m_connections;
             std::queue<std::pair<std::string, json>> m_event_queue;
@@ -90,7 +95,8 @@ namespace Ogma {
             void add_to_broadcast_queue(BackendEvent event, json data);
 
         public:
-            explicit WebSocket(Config config);
+            WebSocket(const std::shared_ptr<Config> &mConfig, const std::shared_ptr<Settings> &mSettings,
+                      const std::shared_ptr<Library> &mLibrary);
             virtual ~WebSocket();
             void start();
             void process_broadcast_queue();

@@ -7,13 +7,18 @@
 #include <math.h>
 #include <boost/algorithm/string.hpp>
 
+#include "Util.h"
 #include "WebSocket.h"
 
 using namespace std;
 using namespace Ogma;
 namespace ph = ws::lib::placeholders;
 
-WebSocket::WebSocket(Config config) : m_config(std::move(config)) {
+CREATE_LOGGER("[WS]  ")
+
+WebSocket::WebSocket(const shared_ptr<Config> &mConfig, const shared_ptr<Settings> &mSettings,
+                     const shared_ptr<Library> &mLibrary) : m_config(mConfig), m_settings(mSettings),
+                                                            m_library(mLibrary) {
     // Important: Also add enum version to WebSocket header file
     m_event_names[BackendEvent::AddConnection] = "add-conn";
     m_event_names[BackendEvent::RemoveConnection] = "remove-conn";
@@ -29,7 +34,7 @@ WebSocket::WebSocket(Config config) : m_config(std::move(config)) {
 
 void WebSocket::start() {
     thread socket_thread([this]() {
-        m_server.listen(m_config.socket_server_port);
+        m_server.listen(m_config->socket_server_port);
         m_server.start_accept();
         m_server.run();
     });
@@ -45,7 +50,7 @@ void WebSocket::on_open(const ws::connection_hdl &handle) {
         lock_guard<mutex> guard(m_connection_lock);
         m_connections[handle] = clientDetails;
     }
-    cout << "[WS] Connected: <" + clientDetails.id + "> from " + clientDetails.ip << endl;
+    logger->info(STR("Connected: <" << clientDetails.id << "> from " << clientDetails.ip));
     add_to_broadcast_queue(BackendEvent::AddConnection, clientDetails.to_json());
 }
 
@@ -57,7 +62,7 @@ void WebSocket::on_close(const ws::connection_hdl &handle) {
         if (client != m_connections.end()) id = client->second.id;
         m_connections.erase(handle);
     }
-    cout << "[WS] Disconnected: <" + id + ">" << endl;
+    logger->info(STR("Disconnected: <" << id << ">"));
     add_to_broadcast_queue(BackendEvent::RemoveConnection, id);
 }
 
@@ -83,7 +88,7 @@ void WebSocket::on_message(ws::connection_hdl handle, const SocketServer::messag
 }
 
 json WebSocket::process_request(const ws::connection_hdl &handle, json action) {
-    cout << "[IPC] Received action: " << action << endl;
+    logger->info(STR("Received action: " << action));
     if (action.find("name") == action.end()) throw runtime_error("Request action has no name specified!");
     string name = action["name"];
 
@@ -137,7 +142,7 @@ void WebSocket::process_broadcast_queue() {
 
         auto name = eventData.first;
         auto data = eventData.second;
-        cout << "[IPC] Broadcasting event " + name + " with data: " + data.dump() << endl;
+        logger->info(STR("Broadcasting event " << name << " with data: " << data.dump()));
         json eventAction = {
                 {"name",    "ipc-forward-event"},
                 {"payload", {{"name", name}, {"data", data}}}
@@ -157,4 +162,5 @@ WebSocket::~WebSocket() {
     m_server.stop_listening();
     m_server.stop();
 }
+
 
