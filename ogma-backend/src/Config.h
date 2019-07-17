@@ -7,7 +7,7 @@
 
 #include <boost/filesystem.hpp>
 
-namespace Ogma {
+namespace ogma {
 
     namespace fs = boost::filesystem;
 

@@ -8,9 +8,10 @@
 #include "WebSocket.h"
 #include "Settings.h"
 #include "Library.h"
+#include "IpcModule.h"
 
 using namespace std;
-using namespace Ogma;
+using namespace ogma;
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 
@@ -18,10 +19,10 @@ const char *param_web_port = "web-port";
 const char *param_socket_port = "socket-port";
 const char *param_frontend = "frontend";
 
-CREATE_LOGGER("[MAIN]")
+CREATE_LOGGER("MAIN")
 
 int main(int ac, char *av[]) {
-    spdlog::set_pattern("%H:%M:%S %n %^%L%$ %v");
+    util::setup_logger();
 
     // Parse command line options
     po::options_description desc("Allowed options");
@@ -67,17 +68,20 @@ int main(int ac, char *av[]) {
 
     // Find home directory
     fs::path ogma_dir; // TODO: Find home dir
-    logger->info(STR("Ogma directory is set to: " << ogma_dir));
+    logger->info(STR("ogma directory is set to: " << ogma_dir));
 
     // Prepare pointers
     shared_ptr<Settings> settings(new Settings(ogma_dir));
     shared_ptr<Library> library(new Library(settings));
+    shared_ptr<IpcModule> ipcModule(new IpcModule(settings, library));
 
-    WebSocket webSocket(config, settings, library);
+    shared_ptr<WebSocket> webSocket(new WebSocket(config, ipcModule));
+    ipcModule->set_web_socket(webSocket);
+
     Server server(config);
 
-    thread broadcast_thread(&WebSocket::process_broadcast_queue, &webSocket);
-    webSocket.start();
+    thread broadcast_thread(&WebSocket::process_broadcast_queue, webSocket.get());
+    webSocket->start();
     server.start();
     broadcast_thread.join();
     return 0;

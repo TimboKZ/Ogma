@@ -1,27 +1,47 @@
 #include <utility>
 
+#include <utility>
+
+#include <utility>
+
+#include <utility>
+
+#include <utility>
+
 //
 // Created by euql1n on 7/15/19.
 //
 
 #include <math.h>
+#include <boost/asio.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include "Util.h"
 #include "WebSocket.h"
 
 using namespace std;
-using namespace Ogma;
+using namespace ogma;
 namespace ph = ws::lib::placeholders;
+namespace algo = boost::algorithm;
+namespace asio = boost::asio;
 
-CREATE_LOGGER("[WS]  ")
+CREATE_LOGGER("WS")
 
-WebSocket::WebSocket(const shared_ptr<Config> &mConfig, const shared_ptr<Settings> &mSettings,
-                     const shared_ptr<Library> &mLibrary) : m_config(mConfig), m_settings(mSettings),
-                                                            m_library(mLibrary) {
+WebSocket::WebSocket(shared_ptr<Config> config, shared_ptr<IpcModule> ipc)
+        : m_config(std::move(config)), m_ipc(std::move(ipc)) {
     // Important: Also add enum version to WebSocket header file
     m_event_names[BackendEvent::AddConnection] = "add-conn";
     m_event_names[BackendEvent::RemoveConnection] = "remove-conn";
+
+    try {
+        asio::io_service io_service;
+        asio::ip::tcp::socket s(io_service);
+        s.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("216.58.193.206"), 80));
+        m_internal_ip = s.local_endpoint().address().to_string();
+        logger->info(STR("Determined local server IP: " << m_internal_ip));
+    } catch (exception &e) {
+        logger->error(STR("Could not determine server IP, using empty string. Error: " << e.what()));
+    }
 
     m_server.init_asio();
     m_server.set_reuse_addr(true);
@@ -45,13 +65,21 @@ void WebSocket::start() {
 
 void WebSocket::on_open(const ws::connection_hdl &handle) {
     const SocketServer::connection_ptr &connection = m_server.get_con_from_hdl(handle);
-    ClientDetails clientDetails = ClientDetails(connection);
+
+    auto id = get_client_id();
+    auto userAgent = connection->get_request_header("user-agent");
+
+    auto address = connection->get_raw_socket().remote_endpoint().address();
+    auto ip = address.to_string();
+    bool localClient = algo::contains(ip, m_internal_ip);
+
+    shared_ptr<ClientDetails> clientDetails(new ClientDetails(id, ip, localClient, userAgent));
     {
         lock_guard<mutex> guard(m_connection_lock);
         m_connections[handle] = clientDetails;
     }
-    logger->info(STR("Connected: <" << clientDetails.id << "> from " << clientDetails.ip));
-    add_to_broadcast_queue(BackendEvent::AddConnection, clientDetails.to_json());
+    logger->info(STR("Connected: <" << clientDetails->id << "> from " << clientDetails->ip));
+    add_to_broadcast_queue(BackendEvent::AddConnection, clientDetails->to_json());
 }
 
 void WebSocket::on_close(const ws::connection_hdl &handle) {
@@ -59,91 +87,71 @@ void WebSocket::on_close(const ws::connection_hdl &handle) {
     {
         lock_guard<mutex> guard(m_connection_lock);
         auto client = m_connections.find(handle);
-        if (client != m_connections.end()) id = client->second.id;
+        if (client != m_connections.end()) id = client->second->id;
         m_connections.erase(handle);
     }
     logger->info(STR("Disconnected: <" << id << ">"));
     add_to_broadcast_queue(BackendEvent::RemoveConnection, id);
 }
 
-
 void WebSocket::on_message(ws::connection_hdl handle, const SocketServer::message_ptr &msg) {
     vector<string> parts;
+    auto request = json::parse(msg->get_payload());
 
-    auto requestAction = json::parse(msg->get_payload());
-
-    json responseAction;
     try {
-        SocketServer::connection_ptr connection = m_server.get_con_from_hdl(handle);
-        responseAction = this->process_request(handle, requestAction);
+        bool callback_called = false;
+        function<void(const json)> callback = [&handle, &callback_called, &request, this](const json &payload) {
+            callback_called = true;
+            auto response = prepare_response(request, payload, nullptr);
+            m_server.send(std::move(handle), response.dump(), ws::frame::opcode::text);
+        };
+        this->process_request(handle, request, callback);
+        if (!callback_called) callback(nullptr);
     } catch (const std::exception &e) {
-        responseAction["error"] = e.what();
+        auto response = prepare_response(request, nullptr, e.what());
+        m_server.send(std::move(handle), response.dump(), ws::frame::opcode::text);
     }
-
-    if (requestAction.find("id") != requestAction.end()) {
-        responseAction["id"] = requestAction["id"];
-    }
-
-    m_server.send(std::move(handle), responseAction.dump(), ws::frame::opcode::text);
 }
 
-json WebSocket::process_request(const ws::connection_hdl &handle, json action) {
+void WebSocket::process_request(const ws::connection_hdl &handle, json action, function<void(const json)> &callback) {
     logger->info(STR("Received action: " << action));
     if (action.find("name") == action.end()) throw runtime_error("Request action has no name specified!");
     string name = action["name"];
 
-    json payload;
-
-    if (name == "getClientDetails") {
-        {
-            lock_guard<mutex> guard(m_connection_lock);
-            auto client = m_connections.find(handle);
-            if (client == m_connections.end()) throw runtime_error("Could not find client details using the handle!");
-            payload = client->second.to_json();
-        }
-    } else if (name == "getClientList") {
-        payload = json::array();
-        {
-            lock_guard<mutex> guard(m_connection_lock);
-            for (auto &clientHandle : m_connections) {
-                payload.emplace_back(clientHandle.second.to_json());
-            }
-        }
-    } else if (name == "getSummaries") {
-        payload = json::array();
-    } else {
-        throw runtime_error("Action " + name + " is not supported .");
+    shared_ptr<ClientDetails> client;
+    {
+        lock_guard<mutex> guard(m_connection_lock);
+        auto client_connection = m_connections.find(handle);
+        if (client_connection == m_connections.end())
+            throw runtime_error("Could not find client details using the handle!");
+        client = client_connection->second;
     }
 
-    json responseAction;
-    responseAction["name"] = name;
-    responseAction["payload"] = payload;
-    return responseAction;
+    m_ipc->process_action(name, {}, client, callback);
 }
 
-void WebSocket::add_to_broadcast_queue(BackendEvent event, json data) {
-    auto name = m_event_names[event];
+void WebSocket::add_to_broadcast_queue(BackendEvent event, const json &data) {
     {
-        lock_guard<mutex> guard(m_action_lock);
-        m_event_queue.push(pair<string, json>(name, data));
+        lock_guard<mutex> guard(m_event_lock);
+        m_event_queue.push(pair<BackendEvent, json>(event, data));
     }
-    m_action_cond.notify_one();
+    m_event_cond.notify_one();
 }
 
 void WebSocket::process_broadcast_queue() {
     while (true) {
         if (m_shutdown) break;
 
-        unique_lock<mutex> lock(m_action_lock);
-        while (m_event_queue.empty()) m_action_cond.wait(lock);
+        unique_lock<mutex> lock(m_event_lock);
+        while (m_event_queue.empty()) m_event_cond.wait(lock);
         auto eventData = m_event_queue.front();
         m_event_queue.pop();
         lock.unlock();
 
-        auto name = eventData.first;
+        auto name = m_event_names[eventData.first];
         auto data = eventData.second;
         logger->info(STR("Broadcasting event " << name << " with data: " << data.dump()));
-        json eventAction = {
+        json event = {
                 {"name",    "ipc-forward-event"},
                 {"payload", {{"name", name}, {"data", data}}}
         };
@@ -151,10 +159,29 @@ void WebSocket::process_broadcast_queue() {
         {
             lock_guard<mutex> guard(m_connection_lock);
             for (auto &handle : m_connections) {
-                m_server.send(handle.first, eventAction.dump(), ws::frame::opcode::text);
+                m_server.send(handle.first, event.dump(), ws::frame::opcode::text);
             }
         }
     }
+}
+
+const vector<shared_ptr<ClientDetails>> WebSocket::get_connected_clients() {
+    vector<shared_ptr<ClientDetails>> clients;
+    {
+        lock_guard<mutex> guard(m_event_lock);
+        clients.reserve(m_connections.size());
+        for (auto &handle : m_connections) clients.push_back(handle.second);
+    }
+    return clients;
+}
+
+const json WebSocket::prepare_response(const json &request, const json &payload, const json &error) {
+    json response;
+    if (request.find("id") != request.end()) response["id"] = request["id"];
+    if (request.find("name") != request.end()) response["name"] = request["name"];
+    if (!payload.is_null()) response["payload"] = payload;
+    if (!error.is_null()) response["error"] = error;
+    return response;
 }
 
 WebSocket::~WebSocket() {
@@ -162,5 +189,4 @@ WebSocket::~WebSocket() {
     m_server.stop_listening();
     m_server.stop();
 }
-
 

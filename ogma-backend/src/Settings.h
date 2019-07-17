@@ -8,7 +8,7 @@
 #include <nlohmann/json.hpp>
 #include <boost/filesystem.hpp>
 
-namespace Ogma {
+namespace ogma {
 
     namespace fs = boost::filesystem;
     using json = nlohmann::json;
@@ -18,10 +18,13 @@ namespace Ogma {
         private:
             fs::path m_ogma_dir;
             fs::path m_ogma_settings_file;
+
             json m_settings_json;
+            std::vector<fs::path> m_open_collections;
 
         public:
             explicit Settings(const fs::path &ogma_dir);
+            const std::vector<fs::path> &get_open_collections();
 
     };
 

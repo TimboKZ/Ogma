@@ -1,3 +1,5 @@
+#include <utility>
+
 //
 // Created by euql1n on 7/15/19.
 //
@@ -15,8 +17,9 @@
 #include "Config.h"
 #include "Settings.h"
 #include "Library.h"
+#include "IpcModule.h"
 
-namespace Ogma {
+namespace ogma {
     namespace ws = websocketpp;
     using json = nlohmann::json;
     using SocketServer = ws::server<ws::config::asio>;
@@ -27,13 +30,12 @@ namespace Ogma {
         RemoveConnection,
     };
 
-
     namespace {
-        int connectionCount = 0;
+        uint16_t connectionCount = 0;
         hashidsxx::Hashids hash_id; // NOLINT(cert-err58-cpp)
 
         std::string get_client_id() {
-            connectionCount++;
+            connectionCount = (connectionCount + 1) % 60000;
             return hash_id.encode(connectionCount);
         }
     }
@@ -44,22 +46,7 @@ namespace Ogma {
         bool localClient = false;
         std::string userAgent;
 
-        ClientDetails() = default;
-
-        explicit ClientDetails(const SocketServer::connection_ptr &connection)
-                : id(get_client_id()),
-                  userAgent(connection->get_request_header("user-agent")) {
-            auto address = connection->get_raw_socket().remote_endpoint().address();
-            if (address.is_v4()) {
-                ip = address.to_v4().to_string();
-                localClient = false; // TODO: Detect local clients for IPv4
-            } else {
-                ip = address.to_v6().to_string();
-                localClient = ip == "::ffff";
-            }
-        };
-
-        json to_json() {
+        const json to_json() {
             json details;
             details["id"] = id;
             details["ip"] = ip;
@@ -67,39 +54,46 @@ namespace Ogma {
             details["userAgent"] = userAgent;
             return details;
         }
+
+        ClientDetails(std::string id, const std::string &ip, bool local_client, const std::string &user_agent)
+                : id(std::move(id)), ip(ip), localClient(local_client), userAgent(user_agent) {}
     };
 
-    using ConnectionList = std::map<ws::connection_hdl, ClientDetails, std::owner_less<ws::connection_hdl>>;
+    using ConnectionList = std::map<ws::connection_hdl, std::shared_ptr<ClientDetails>,
+            std::owner_less<ws::connection_hdl>>;
 
     class WebSocket {
         private:
             std::shared_ptr<Config> m_config;
-            std::shared_ptr<Settings> m_settings;
-            std::shared_ptr<Library> m_library;
+            std::shared_ptr<IpcModule> m_ipc;
+            std::string m_internal_ip;
 
             SocketServer m_server;
             ConnectionList m_connections;
-            std::queue<std::pair<std::string, json>> m_event_queue;
-            std::map<BackendEvent, std::string> m_event_names;
-
-            std::mutex m_action_lock;
             std::mutex m_connection_lock;
-            std::condition_variable m_action_cond;
+            std::mutex m_event_lock;
+
+            std::condition_variable m_event_cond;
+            std::map<BackendEvent, std::string> m_event_names;
+            std::queue<std::pair<BackendEvent, json>> m_event_queue;
 
             bool m_shutdown = false;
 
             void on_open(const ws::connection_hdl &handle);
             void on_close(const ws::connection_hdl &handle);
             void on_message(ws::connection_hdl handle, const SocketServer::message_ptr &msg);
-            json process_request(const ws::connection_hdl &handle, json action);
-            void add_to_broadcast_queue(BackendEvent event, json data);
+            void process_request(const ws::connection_hdl &handle, json action,
+                                 std::function<void(const json)> &callback);
+            void add_to_broadcast_queue(BackendEvent event, const json &data);
+
+            static const json prepare_response(const json &request, const json &payload, const json &error);
 
         public:
-            WebSocket(const std::shared_ptr<Config> &mConfig, const std::shared_ptr<Settings> &mSettings,
-                      const std::shared_ptr<Library> &mLibrary);
+            WebSocket(std::shared_ptr<Config> config, std::shared_ptr<IpcModule> ipc);
             virtual ~WebSocket();
             void start();
             void process_broadcast_queue();
+            const std::vector<std::shared_ptr<ClientDetails>> get_connected_clients();
     };
 
 }

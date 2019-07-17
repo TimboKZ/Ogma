@@ -45,7 +45,7 @@ add_executable(
         src/Settings.cpp
         src/Library.cpp
         ${Lib_SRC}
-)
+        src/Collection.cpp src/Collection.h src/IpcModule.cpp src/IpcModule.h)
 target_link_libraries(
         ogma_backend
         sqlite3

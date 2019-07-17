@@ -9,7 +9,7 @@
 
 #include "Config.h"
 
-namespace Ogma {
+namespace ogma {
 
     using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 

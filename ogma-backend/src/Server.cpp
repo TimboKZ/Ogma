@@ -8,9 +8,9 @@
 #include "Server.h"
 
 using namespace std;
-using namespace Ogma;
+using namespace ogma;
 
-CREATE_LOGGER("[SERV]")
+CREATE_LOGGER("SERV")
 
 Server::Server(const shared_ptr<Config> &mConfig) : m_config(mConfig) {
     m_web_server.config.port = m_config->web_server_port;
