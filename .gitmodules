@@ -1,3 +1,0 @@
-[submodule "ogma-backend/libs/spdlog"]
-	path = ogma-backend/libs/spdlog
-	url = git@github.com:gabime/spdlog.git
