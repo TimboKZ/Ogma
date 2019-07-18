@@ -7,6 +7,7 @@
 import _ from 'lodash';
 import Promise from 'bluebird';
 import {UserFriendlyError} from './ErrorHandler';
+import {EnvSummary} from '../redux/ReduxTypedef';
 
 type IpcAction = {
     id?: number,
@@ -116,6 +117,8 @@ export default class IpcModule {
 
     getClientList(): Promise<ClientDetails[]> { return this.placeholderPromise;}
 
+    openCollection(): Promise<EnvSummary> { return this.placeholderPromise; }
+
     // noinspection JSUnusedGlobalSymbols
     /**
      * @returns {Promise<EnvSummary[]>}
@@ -218,15 +221,6 @@ export default class IpcModule {
     }
 
     // noinspection JSUnusedGlobalSymbols
-    // @ts-ignore
-    createEnvironment(_, client) {
-        if (!client.localClient) {
-            throw new Error('Only local clients can create new environment!');
-        }
-        return this.envManager.createEnvironment();
-    }
-
-    // noinspection JSUnusedGlobalSymbols
     /**
      * @param {object} data
      * @param {string} data.id
@@ -259,19 +253,6 @@ export default class IpcModule {
     // @ts-ignore
     scanDirectoryForChanges(data) {
         return this.envManager.getEnvironment(data).scanDirectoryForChanges(data);
-    }
-
-    // noinspection JSUnusedGlobalSymbols
-    /**
-     * @param {object} data
-     * @param {string} data.id Environment ID
-     * @param {string} data.path Relative path of the file (from environment root)
-     * @param {ClientDetails} [client]
-     */
-    // @ts-ignore
-    openFile(data, client) {
-        if (!client.localClient) throw new Error('Only local clients can open files natively!');
-        return this.envManager.getEnvironment(data).openFile(data);
     }
 
     // noinspection JSUnusedGlobalSymbols

@@ -43,7 +43,7 @@ class AppDashboard extends React.Component {
         }
         NotificationManager.info('Check other windows on your computer.',
             'The "create new collection" dialog is now open.');
-        window.ipcModule.createEnvironment()
+        window.ipcModule.openCollection()
             .then(summary => {
                 if (!summary) return null;
 
