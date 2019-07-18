@@ -101,6 +101,7 @@ export default class DataManager {
         this.uaParser.setUA(clientDetails.userAgent);
         return {
             ...clientDetails,
+            ip: clientDetails.ip.replace('::ffff:192', '192'),
             userAgent: this.uaParser.getResult(),
         };
     };

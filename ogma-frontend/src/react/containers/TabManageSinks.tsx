@@ -16,7 +16,7 @@ import Icon from '../components/Icon';
 import SinkTree from '../../util/SinkTree';
 import SinkViz from '../components/SinkViz';
 import {EnvSummaryPropType} from '../../util/typedef';
-import {AppState, EnvSummary, Sink, TagMap} from '../../redux/ReduxTypedef';
+import {AppState, EnvSummary, TagMap} from '../../redux/ReduxTypedef';
 import {createShallowEqualObjectSelector, Selector} from '../../redux/Selector';
 
 type TabManageSinksProps = {
