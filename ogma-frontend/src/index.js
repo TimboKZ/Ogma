@@ -50,16 +50,24 @@ ReactDOM.render(<NotificationContainer/>, document.getElementById('notif'));
 
 // Socket.IO connection logic
 const socketInitPromise = new Promise(resolve => {
-    const socket = new ReconnectingWebSocket(`ws://${baseConfig.host}:${baseConfig.socketPort}`);
+    const options = {connectionTimeout: 1000, maxRetries: 10};
+    const wsAddress = `ws://${baseConfig.host}:${baseConfig.socketPort}`;
+    if (window.isDevelopment) {
+        console.log(`[WS] Connecting to web socket address: ${wsAddress}`);
+        console.time('[WS] Connected to socket.');
+    }
+    const socket = new ReconnectingWebSocket(wsAddress, [], options);
 
     let firstConnection = true;
     socket.addEventListener('open', () => {
         NotificationManager.success('Successfully connected to Ogma server.');
-        console.log('[WS] Connected to socket.');
 
         if (firstConnection) {
+            if (window.isDevelopment) console.timeEnd('[WS] Connected to socket.');
             firstConnection = false;
             resolve(socket);
+        } else {
+            console.log('[WS] Reconnected to socket.');
         }
     });
     socket.addEventListener('close', () => {
@@ -69,6 +77,7 @@ const socketInitPromise = new Promise(resolve => {
         NotificationManager.error('Error occurred when connecting to server.');
         console.error('Error occurred while establishing socket connection:', error.message);
     });
+    socket.reconnect();
 });
 
 // Prepare loader reference

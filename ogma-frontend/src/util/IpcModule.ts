@@ -6,6 +6,8 @@
 
 import _ from 'lodash';
 import Promise from 'bluebird';
+import ReconnectingWebSocket from 'reconnecting-websocket';
+
 import {UserFriendlyError} from './ErrorHandler';
 import {EnvSummary} from '../redux/ReduxTypedef';
 
@@ -30,7 +32,7 @@ export type ClientDetails = {
 
 export default class IpcModule {
 
-    socket: any;
+    socket: ReconnectingWebSocket;
     emitter: any;
     requestCount: number;
     timeout: 5000;

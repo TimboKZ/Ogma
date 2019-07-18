@@ -8,9 +8,9 @@ import _ from 'lodash';
 import Denque from 'denque';
 import {Store} from 'redux';
 import Promise from 'bluebird';
-import {Socket} from 'socket.io';
 import {UAParser} from 'ua-parser-js';
 import {EventEmitter2} from 'eventemitter2';
+import ReconnectingWebSocket from 'reconnecting-websocket';
 
 import {ClientDetails} from './IpcModule';
 import ErrorHandler from './ErrorHandler';
@@ -20,7 +20,7 @@ import {File, AppState, ReduxAction, Client} from '../redux/ReduxTypedef';
 
 export default class DataManager {
 
-    socket: Socket;
+    socket: ReconnectingWebSocket;
     store: Store<AppState, ReduxAction>;
     emitter: EventEmitter2;
     uaParser: UAParser;
@@ -29,7 +29,7 @@ export default class DataManager {
     thumbRequestQueue: Denque;
     _debounceRequestBatchThumbnails: () => void;
 
-    constructor(socket: Socket, store: Store<AppState, ReduxAction>) {
+    constructor(socket: ReconnectingWebSocket, store: Store<AppState, ReduxAction>) {
         this.socket = socket;
         this.store = store;
         this.emitter = window.proxyEmitter;
@@ -42,12 +42,13 @@ export default class DataManager {
 
     init() {
         // Setup reconnect logic
-        this._syncBaseState()
-            .catch(ErrorHandler.handleMiscError);
-
-        type BackendEventHandler = (data?: any) => void;
+        this.socket.addEventListener('open', () => {
+            this._syncBaseState()
+                .catch(ErrorHandler.handleMiscError);
+        });
 
         // Setup listeners
+        type BackendEventHandler = (data?: any) => void;
         const listenerMap: { [eventName: string]: BackendEventHandler } = {
             [BackendEvents.AddConnection]: (clientDetails: ClientDetails) => {
                 Dispatcher.addConnection(this._parseClientDetails(clientDetails));
