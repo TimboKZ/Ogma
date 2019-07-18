@@ -10,9 +10,7 @@
 using namespace std;
 using namespace ogma;
 
-CREATE_LOGGER("SERV")
-
-Server::Server(const shared_ptr<Config> &mConfig) : m_config(mConfig) {
+Server::Server(shared_ptr<Config> config) : logger(util::create_logger("serv")), m_config(std::move(config)) {
     m_web_server.config.port = m_config->web_server_port;
     m_web_server.default_resource["GET"] = [this](shared_ptr<HttpServer::Response> response,
                                                   shared_ptr<HttpServer::Request> request) {

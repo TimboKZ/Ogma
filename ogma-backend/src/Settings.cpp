@@ -1,6 +1,4 @@
-//
-// Created by euql1n on 7/16/19.
-//
+#include <utility>
 
 #include "Util.h"
 #include "Settings.h"
@@ -11,10 +9,8 @@ using namespace ogma;
 const char *version_param = "version";
 const char *collections_param = "open_collections";
 
-CREATE_LOGGER("SET")
-
-ogma::Settings::Settings(const fs::path &ogma_dir) {
-    m_ogma_dir = fs::canonical(ogma_dir);
+ogma::Settings::Settings(fs::path ogma_dir)
+        : logger(util::create_logger("set")), m_ogma_dir(std::move(ogma_dir)) {
     fs::create_directories(m_ogma_dir);
 
     bool overwriteSettings = true;
@@ -32,15 +28,14 @@ ogma::Settings::Settings(const fs::path &ogma_dir) {
 
             if (m_settings_json.contains(collections_param) && m_settings_json[collections_param].is_array()) {
                 overwriteSettings = false;
+                for (string path : m_settings_json[collections_param]) m_open_collections.emplace_back(path);
             }
         }
     }
 
     if (overwriteSettings) {
         m_settings_json[version_param] = OGMA_VERSION;
-        m_settings_json[collections_param] = json::array();
-        fs::ofstream ofs(m_ogma_settings_file);
-        ofs << m_settings_json.dump() << endl;
+        persist();
     }
 
     logger->info(STR("Effective settings: " << m_settings_json));
@@ -50,6 +45,21 @@ ogma::Settings::Settings(const fs::path &ogma_dir) {
     }
 }
 
+void Settings::persist() {
+    m_settings_json[version_param] = OGMA_VERSION;
+    m_settings_json[collections_param] = json::array();
+    for (auto &path : m_open_collections) m_settings_json.emplace_back(path.string());
+
+    fs::ofstream ofs(m_ogma_settings_file);
+    ofs << m_settings_json.dump(2) << endl;
+}
+
 const vector<fs::path> &Settings::get_open_collections() {
     return m_open_collections;
 }
+
+void Settings::set_open_collections(const vector<fs::path> &open_collections) {
+    m_open_collections = open_collections;
+    persist();
+}
+

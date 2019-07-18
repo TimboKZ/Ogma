@@ -16,11 +16,13 @@ namespace ogma {
     class Server {
 
         private:
+            std::shared_ptr<spdlog::logger> logger;
+
             std::shared_ptr<Config> m_config;
             HttpServer m_web_server;
 
         public:
-            explicit Server(const std::shared_ptr<Config> &mConfig);
+            explicit Server(std::shared_ptr<Config> config);
             virtual ~Server();
             void start();
 

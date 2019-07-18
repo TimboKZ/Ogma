@@ -15,6 +15,7 @@ namespace ogma {
         int web_server_port;
         int socket_server_port;
         fs::path frontend_build_path;
+        fs::path ogma_dir;
     };
 
 }

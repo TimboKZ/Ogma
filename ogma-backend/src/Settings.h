@@ -16,16 +16,20 @@ namespace ogma {
     class Settings {
 
         private:
+            std::shared_ptr<spdlog::logger> logger;
+
             fs::path m_ogma_dir;
             fs::path m_ogma_settings_file;
 
             json m_settings_json;
             std::vector<fs::path> m_open_collections;
 
-        public:
-            explicit Settings(const fs::path &ogma_dir);
-            const std::vector<fs::path> &get_open_collections();
+            void persist();
 
+        public:
+            explicit Settings(fs::path ogma_dir);
+            const std::vector<fs::path> &get_open_collections();
+            void set_open_collections(const std::vector<fs::path> &open_collections);
     };
 
 }

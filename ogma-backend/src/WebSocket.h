@@ -1,5 +1,9 @@
 #include <utility>
 
+#include <utility>
+
+#include <utility>
+
 //
 // Created by euql1n on 7/15/19.
 //
@@ -55,8 +59,8 @@ namespace ogma {
             return details;
         }
 
-        ClientDetails(std::string id, const std::string &ip, bool local_client, const std::string &user_agent)
-                : id(std::move(id)), ip(ip), localClient(local_client), userAgent(user_agent) {}
+        ClientDetails(std::string id, std::string ip, bool local_client, std::string user_agent)
+                : id(std::move(id)), ip(std::move(ip)), localClient(local_client), userAgent(std::move(user_agent)) {}
     };
 
     using ConnectionList = std::map<ws::connection_hdl, std::shared_ptr<ClientDetails>,
@@ -64,8 +68,10 @@ namespace ogma {
 
     class WebSocket {
         private:
-            std::shared_ptr<Config> m_config;
-            std::shared_ptr<IpcModule> m_ipc;
+            std::shared_ptr<spdlog::logger> logger;
+
+            Config* m_config;
+            IpcModule* m_ipc;
             std::string m_internal_ip;
 
             SocketServer m_server;
@@ -89,7 +95,7 @@ namespace ogma {
             static const json prepare_response(const json &request, const json &payload, const json &error);
 
         public:
-            WebSocket(std::shared_ptr<Config> config, std::shared_ptr<IpcModule> ipc);
+            WebSocket(Config* config, IpcModule* ipc);
             virtual ~WebSocket();
             void start();
             void process_broadcast_queue();

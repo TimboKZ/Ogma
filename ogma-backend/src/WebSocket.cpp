@@ -10,10 +10,6 @@
 
 //
 // Created by euql1n on 7/15/19.
-//
-
-#include <math.h>
-#include <boost/asio.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include "Util.h"
@@ -23,25 +19,12 @@ using namespace std;
 using namespace ogma;
 namespace ph = ws::lib::placeholders;
 namespace algo = boost::algorithm;
-namespace asio = boost::asio;
 
-CREATE_LOGGER("WS")
-
-WebSocket::WebSocket(shared_ptr<Config> config, shared_ptr<IpcModule> ipc)
-        : m_config(std::move(config)), m_ipc(std::move(ipc)) {
+WebSocket::WebSocket(Config *config, IpcModule *ipc)
+        : logger(util::create_logger("ws")), m_config(config), m_ipc(ipc) {
     // Important: Also add enum version to WebSocket header file
     m_event_names[BackendEvent::AddConnection] = "add-conn";
     m_event_names[BackendEvent::RemoveConnection] = "remove-conn";
-
-    try {
-        asio::io_service io_service;
-        asio::ip::tcp::socket s(io_service);
-        s.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("216.58.193.206"), 80));
-        m_internal_ip = s.local_endpoint().address().to_string();
-        logger->info(STR("Determined local server IP: " << m_internal_ip));
-    } catch (exception &e) {
-        logger->error(STR("Could not determine server IP, using empty string. Error: " << e.what()));
-    }
 
     m_server.init_asio();
     m_server.set_reuse_addr(true);

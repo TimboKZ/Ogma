@@ -1,6 +1,6 @@
 #include <iostream>
 #include <boost/program_options.hpp>
-#include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "Util.h"
 #include "Config.h"
@@ -12,31 +12,51 @@
 
 using namespace std;
 using namespace ogma;
-namespace po = boost::program_options;
 namespace fs = boost::filesystem;
+namespace algo = boost::algorithm;
+namespace po = boost::program_options;
 
 const char *param_web_port = "web-port";
 const char *param_socket_port = "socket-port";
 const char *param_frontend = "frontend";
-
-CREATE_LOGGER("MAIN")
+const char *param_ogma_dir = "ogma-dir";
+const char *param_debug = "debug";
 
 int main(int ac, char *av[]) {
-    util::setup_logger();
-
     // Parse command line options
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
             (param_web_port, po::value<int>(), "port on which the web server will listen")
             (param_socket_port, po::value<int>(), "port on which the websocket server will listen")
-            (param_frontend, po::value<string>(), "path to frontend build");
+            (param_frontend, po::value<string>(), "path to frontend build")
+            (param_ogma_dir, po::value<string>(), "path to Ogma config folder")
+            (param_debug, po::bool_switch()->default_value(false), "show debug messages");
     po::variables_map vm;
-    po::store(po::parse_command_line(ac, av, desc), vm);
-    po::notify(vm);
-    if (vm.count("help")) {
-        std::cout << desc << std::endl;
+    try {
+        po::store(po::parse_command_line(ac, av, desc), vm);
+        po::notify(vm);
+    } catch (exception &e) {
+        cerr << "Error parsing arguments: " << e.what() << endl;
+        cout << desc;
         return 1;
+    }
+    if (vm.count("help")) {
+        cout << desc;
+        return 1;
+    }
+
+    // Enable debug messages if needed
+    util::set_debug(vm[param_debug].as<bool>());
+    auto logger = util::create_logger("main");
+    if (util::is_debug()) logger->info(STR("Running in debug mode."));
+
+    // Initialize util to determine home path, etc.
+    try {
+        util::init_util();
+    } catch (exception &e) {
+        logger->error("Could not figure out the path to user's home folder. Exiting.");
+        return 2;
     }
 
     // Prepare config
@@ -44,20 +64,32 @@ int main(int ac, char *av[]) {
     if (vm.count(param_web_port)) {
         config->web_server_port = vm[param_web_port].as<int>();
     } else {
-        logger->info("Web server port was not specified. Using default.");
+        logger->warn("Web server port was not specified. Using default.");
         config->web_server_port = 10548;
     }
     if (vm.count(param_socket_port)) {
         config->socket_server_port = vm[param_socket_port].as<int>();
     } else {
-        logger->info("Websocket server port was not specified. Using default.");
+        logger->warn("Websocket server port was not specified. Using default.");
         config->socket_server_port = 10549;
     }
     if (vm.count(param_frontend)) {
-        config->frontend_build_path = fs::canonical(vm[param_frontend].as<string>());
+        config->frontend_build_path = fs::absolute(vm[param_frontend].as<string>());
     } else {
-        logger->error("Frontend build path was not specified. Aborting.");
-        return 2;
+        logger->error("Frontend build path was not specified. Exiting.");
+        return 3;
+    }
+    if (vm.count(param_ogma_dir)) {
+        string inputPath = vm[param_ogma_dir].as<string>();
+        if (algo::contains(inputPath, "~")) {
+            logger->error(STR("Supplied Ogma config directory path contains tilde (~). "
+                              "Please provide a full path since special characters will not be expanded. "
+                              "Path: " << inputPath));
+            return 4;
+        }
+        config->ogma_dir = fs::absolute(inputPath).lexically_normal();
+    } else {
+        config->ogma_dir = util::get_home_path() / ".ogma";
     }
 
     // Log effective config
@@ -65,18 +97,15 @@ int main(int ac, char *av[]) {
     logger->info(STR("  - web server port: " << config->web_server_port));
     logger->info(STR("  - socket server port: " << config->socket_server_port));
     logger->info(STR("  - frontend build path: " << config->frontend_build_path));
-
-    // Find home directory
-    fs::path ogma_dir; // TODO: Find home dir
-    logger->info(STR("ogma directory is set to: " << ogma_dir));
+    logger->info(STR("  - Ogma config directory: " << config->ogma_dir));
 
     // Prepare pointers
-    shared_ptr<Settings> settings(new Settings(ogma_dir));
-    shared_ptr<Library> library(new Library(settings));
-    shared_ptr<IpcModule> ipcModule(new IpcModule(settings, library));
+    unique_ptr<Settings> settings(new Settings(config->ogma_dir));
+    unique_ptr<Library> library(new Library(settings.get()));
+    unique_ptr<IpcModule> ipcModule(new IpcModule(settings.get(), library.get()));
 
-    shared_ptr<WebSocket> webSocket(new WebSocket(config, ipcModule));
-    ipcModule->set_web_socket(webSocket);
+    unique_ptr<WebSocket> webSocket(new WebSocket(config.get(), ipcModule.get()));
+    ipcModule->set_web_socket(webSocket.get());
 
     Server server(config);
 

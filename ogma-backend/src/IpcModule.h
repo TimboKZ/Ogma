@@ -19,13 +19,15 @@ namespace ogma {
     class IpcModule {
 
         private:
-            std::shared_ptr<Settings> m_settings;
-            std::shared_ptr<Library> m_library;
-            std::shared_ptr<WebSocket> m_web_socket;
+            std::shared_ptr<spdlog::logger> logger;
+
+            Settings *m_settings;
+            Library *m_library;
+            WebSocket *m_web_socket = nullptr;
 
         public:
-            IpcModule(std::shared_ptr<Settings> settings, std::shared_ptr<Library> library);
-            void set_web_socket(const std::shared_ptr<WebSocket> &webSocket);
+            IpcModule(Settings *settings, Library *library);
+            void set_web_socket(WebSocket *webSocket);
             void process_action(const std::string &name, const json &data,
                                 const std::shared_ptr<ClientDetails> &client,
                                 const std::function<void(const json)> &callback);

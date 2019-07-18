@@ -1,8 +1,5 @@
 #include <utility>
-
-//
-// Created by euql1n on 7/17/19.
-//
+#include <nfd.h>
 
 #include "Util.h"
 #include "IpcModule.h"
@@ -11,12 +8,10 @@
 using namespace std;
 using namespace ogma;
 
-CREATE_LOGGER("IPC")
+IpcModule::IpcModule(Settings *settings, Library *library)
+        : logger(util::create_logger("ipc")), m_settings(settings), m_library(library) {}
 
-IpcModule::IpcModule(shared_ptr<Settings> settings, shared_ptr<Library> library)
-        : m_settings(move(settings)), m_library(move(library)) {}
-
-void IpcModule::set_web_socket(const shared_ptr<WebSocket> &webSocket) { m_web_socket = webSocket; }
+void IpcModule::set_web_socket(WebSocket *webSocket) { m_web_socket = webSocket; }
 
 void IpcModule::process_action(const std::string &name, const json &data,
                                const std::shared_ptr<ClientDetails> &client,
@@ -30,6 +25,19 @@ void IpcModule::process_action(const std::string &name, const json &data,
         for (auto &connectedClient : clients) payload.emplace_back(connectedClient->to_json());
     } else if (name == "getSummaries") {
         payload = json::array();
+    } else if (name == "openCollection") {
+        nfdchar_t *outPath = nullptr;
+        nfdresult_t result = NFD_PickFolder(nullptr, &outPath);
+        if (result == NFD_OKAY) {
+            fs::path collPath(outPath);
+            auto collection = m_library->open_collection(collPath);
+            auto summary = collection->getSummary();
+            payload = summary.to_json();
+        } else if (result == NFD_CANCEL) {
+            payload = nullptr;
+        } else {
+            throw runtime_error(NFD_GetError());
+        }
     } else {
         throw runtime_error("Action " + name + " is not supported .");
     }
