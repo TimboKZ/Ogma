@@ -1,15 +1,5 @@
 #include <utility>
-
-#include <utility>
-
-#include <utility>
-
-#include <utility>
-
-#include <utility>
-
-//
-// Created by euql1n on 7/15/19.
+#include <hashids.h>
 #include <boost/algorithm/string.hpp>
 
 #include "Util.h"
@@ -22,9 +12,7 @@ namespace algo = boost::algorithm;
 
 WebSocket::WebSocket(Config *config, IpcModule *ipc)
         : logger(util::create_logger("ws")), m_config(config), m_ipc(ipc) {
-    // Important: Also add enum version to WebSocket header file
-    m_event_names[BackendEvent::AddConnection] = "add-conn";
-    m_event_names[BackendEvent::RemoveConnection] = "remove-conn";
+    setup_event_names();
 
     m_server.init_asio();
     m_server.set_reuse_addr(true);
@@ -46,6 +34,14 @@ void WebSocket::start() {
     this_thread::sleep_for(chrono::seconds(1));
 }
 
+uint16_t connectionCount = 0;
+hashidsxx::Hashids hash_id; // NOLINT(cert-err58-cpp)
+
+std::string get_client_id() {
+    connectionCount = (connectionCount + 1) % 60000;
+    return hash_id.encode(connectionCount);
+}
+
 void WebSocket::on_open(const ws::connection_hdl &handle) {
     const SocketServer::connection_ptr &connection = m_server.get_con_from_hdl(handle);
 
@@ -54,7 +50,7 @@ void WebSocket::on_open(const ws::connection_hdl &handle) {
 
     auto address = connection->get_raw_socket().remote_endpoint().address();
     auto ip = address.to_string();
-    bool localClient = algo::contains(ip, m_internal_ip);
+    bool localClient = algo::contains(ip, util::get_local_ip());
 
     shared_ptr<ClientDetails> clientDetails(new ClientDetails(id, ip, localClient, userAgent));
     {
@@ -81,6 +77,7 @@ void WebSocket::on_message(ws::connection_hdl handle, const SocketServer::messag
     vector<string> parts;
     auto request = json::parse(msg->get_payload());
 
+    auto action_num = ++m_action_count;
     try {
         bool callback_called = false;
         function<void(const json)> callback = [&handle, &callback_called, &request, this](const json &payload) {
@@ -88,18 +85,20 @@ void WebSocket::on_message(ws::connection_hdl handle, const SocketServer::messag
             auto response = prepare_response(request, payload, nullptr);
             m_server.send(std::move(handle), response.dump(), ws::frame::opcode::text);
         };
+        logger->info(STR("Received action #" << action_num << ": " << request));
         this->process_request(handle, request, callback);
         if (!callback_called) callback(nullptr);
     } catch (const std::exception &e) {
+        logger->error(STR("Error on action #" << action_num << ": " << e.what()));
         auto response = prepare_response(request, nullptr, e.what());
         m_server.send(std::move(handle), response.dump(), ws::frame::opcode::text);
     }
 }
 
 void WebSocket::process_request(const ws::connection_hdl &handle, json action, function<void(const json)> &callback) {
-    logger->info(STR("Received action: " << action));
     if (action.find("name") == action.end()) throw runtime_error("Request action has no name specified!");
     string name = action["name"];
+    json payload = action["payload"];
 
     shared_ptr<ClientDetails> client;
     {
@@ -110,7 +109,7 @@ void WebSocket::process_request(const ws::connection_hdl &handle, json action, f
         client = client_connection->second;
     }
 
-    m_ipc->process_action(name, {}, client, callback);
+    m_ipc->process_action(name, payload, client, callback);
 }
 
 void WebSocket::add_to_broadcast_queue(BackendEvent event, const json &data) {
@@ -131,7 +130,7 @@ void WebSocket::process_broadcast_queue() {
         m_event_queue.pop();
         lock.unlock();
 
-        auto name = m_event_names[eventData.first];
+        auto name = event_names[eventData.first];
         auto data = eventData.second;
         logger->info(STR("Broadcasting event " << name << " with data: " << data.dump()));
         json event = {

@@ -55,7 +55,7 @@ int main(int ac, char *av[]) {
     try {
         util::init_util();
     } catch (exception &e) {
-        logger->error("Could not figure out the path to user's home folder. Exiting.");
+        logger->error(e.what());
         return 2;
     }
 
@@ -89,7 +89,7 @@ int main(int ac, char *av[]) {
         }
         config->ogma_dir = fs::absolute(inputPath).lexically_normal();
     } else {
-        config->ogma_dir = util::get_home_path() / ".ogma";
+        config->ogma_dir = util::get_home_dir() / ".ogma";
     }
 
     // Log effective config
@@ -105,6 +105,7 @@ int main(int ac, char *av[]) {
     unique_ptr<IpcModule> ipcModule(new IpcModule(settings.get(), library.get()));
 
     unique_ptr<WebSocket> webSocket(new WebSocket(config.get(), ipcModule.get()));
+    library->setWebSocket(webSocket.get());
     ipcModule->set_web_socket(webSocket.get());
 
     Server server(config);

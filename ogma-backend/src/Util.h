@@ -2,13 +2,14 @@
 #define OGMA_BACKEND_UTIL_H
 
 #include <map>
+#include <ctime>
 #include <sstream>
-#include <iostream>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <boost/filesystem.hpp>
 
 #define OGMA_VERSION "v3.0.0"
+#define OGMA_COLL_CONFIG_DIR ".ogma_v3"
 #define STR(a) (ogma::util::Formatter() << a >> ogma::util::Formatter::to_str)
 
 namespace ogma {
@@ -19,11 +20,15 @@ namespace ogma {
 
         namespace {
             bool debug = true;
-            fs::path program_path;
-            fs::path sql_path;
-            fs::path home_path;
+            fs::path program_dir;
+            fs::path sql_dir;
+            fs::path home_dir;
             std::string local_ip;
+            std::vector<std::string> colors;
+            std::vector<std::string> colors_light;
+            std::vector<std::string> colors_dark;
         }
+
 
         void set_debug(bool debug);
 
@@ -31,13 +36,15 @@ namespace ogma {
 
         void init_util();
 
-        const fs::path &get_program_path();
+        const fs::path &get_program_dir();
 
-        const fs::path &get_sql_path();
+        const fs::path &get_sql_dir();
 
-        const fs::path &get_home_path();
+        const fs::path &get_home_dir();
 
         const std::string &get_local_ip();
+
+        const std::vector<std::string> &get_colors();
 
         class Formatter {
             public:
@@ -69,6 +76,16 @@ namespace ogma {
         };
 
         std::shared_ptr<spdlog::logger> create_logger(const std::string &name);
+
+        std::time_t get_unix_timestamp();
+
+        std::string get_md5(const std::string &stringToHash);
+
+        std::string slugify(std::string str);
+
+        std::string read_file(const fs::path &path);
+
+        std::string read_file(const fs::ifstream &in);
 
     }
 

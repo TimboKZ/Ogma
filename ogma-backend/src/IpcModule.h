@@ -28,7 +28,7 @@ namespace ogma {
         public:
             IpcModule(Settings *settings, Library *library);
             void set_web_socket(WebSocket *webSocket);
-            void process_action(const std::string &name, const json &data,
+            void process_action(const std::string &name, const json &requestPayload,
                                 const std::shared_ptr<ClientDetails> &client,
                                 const std::function<void(const json)> &callback);
 

@@ -12,6 +12,9 @@
 
 namespace ogma {
 
+    // Forward declaration
+    class WebSocket;
+
     namespace fs = boost::filesystem;
 
     class Library {
@@ -20,17 +23,29 @@ namespace ogma {
             std::shared_ptr<spdlog::logger> logger;
 
             Settings *m_settings;
+            WebSocket *m_web_socket = nullptr;
 
             std::mutex m_coll_lock;
             std::map<std::string, std::shared_ptr<Collection>> m_coll_by_id;
+            std::map<fs::path, std::shared_ptr<Collection>> m_coll_by_slug;
             std::map<fs::path, std::shared_ptr<Collection>> m_coll_by_path;
 
+            Summary getDefaultSummary(const fs::path &path);
+
             std::shared_ptr<Collection> open(const fs::path &path, bool allow_new = false);
-            void update_open_collections();
+
+            void updateOpenCollections();
 
         public:
             explicit Library(Settings *settings);
-            std::shared_ptr<Collection> open_collection(const fs::path &path);
+
+            void setWebSocket(WebSocket *web_socket);
+
+            std::shared_ptr<Collection> openCollection(const fs::path &path);
+
+            std::shared_ptr<Collection> getCollection(const std::string &id);
+
+            std::vector<std::shared_ptr<Summary>> getSummaries();
     };
 
 }

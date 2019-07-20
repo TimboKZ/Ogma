@@ -1,6 +1,5 @@
 #include <utility>
 
-#include "Util.h"
 #include "Settings.h"
 
 using namespace std;
@@ -48,7 +47,7 @@ ogma::Settings::Settings(fs::path ogma_dir)
 void Settings::persist() {
     m_settings_json[version_param] = OGMA_VERSION;
     m_settings_json[collections_param] = json::array();
-    for (auto &path : m_open_collections) m_settings_json.emplace_back(path.string());
+    for (auto &path : m_open_collections) m_settings_json[collections_param].emplace_back(path.string());
 
     fs::ofstream ofs(m_ogma_settings_file);
     ofs << m_settings_json.dump(2) << endl;

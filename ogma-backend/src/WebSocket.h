@@ -1,19 +1,9 @@
-#include <utility>
-
-#include <utility>
-
-#include <utility>
-
-//
-// Created by euql1n on 7/15/19.
-//
-
 #ifndef OGMA_BACKEND_WEBSOCKET_H
 #define OGMA_BACKEND_WEBSOCKET_H
 
 #include <map>
+#include <utility>
 #include <stdbool.h>
-#include <hashids.h>
 #include <nlohmann/json.hpp>
 #include <websocketpp/server.hpp>
 #include <websocketpp/config/asio_no_tls.hpp>
@@ -28,19 +18,27 @@ namespace ogma {
     using json = nlohmann::json;
     using SocketServer = ws::server<ws::config::asio>;
 
-    enum BackendEvent {
-        // Important: Also add string version to WebSocket constructor
-                AddConnection,
+    // Important: Also add string version to below
+    enum BackendEvent : unsigned int {
+        AddConnection,
         RemoveConnection,
+        CreateEnvironment,
+
+        EnvUpdateFiles,
+        EnvRemoveFiles,
     };
 
     namespace {
-        uint16_t connectionCount = 0;
-        hashidsxx::Hashids hash_id; // NOLINT(cert-err58-cpp)
+        std::map<BackendEvent, std::string> event_names;
 
-        std::string get_client_id() {
-            connectionCount = (connectionCount + 1) % 60000;
-            return hash_id.encode(connectionCount);
+        void setup_event_names() {
+            // Important: Also add enum version above
+            event_names[BackendEvent::AddConnection] = "add-conn";
+            event_names[BackendEvent::RemoveConnection] = "remove-conn";
+            event_names[BackendEvent::CreateEnvironment] = "create-env";
+
+            event_names[BackendEvent::EnvUpdateFiles] = "env-update-files";
+            event_names[BackendEvent::EnvRemoveFiles] = "env-remove-files";
         }
     }
 
@@ -70,9 +68,8 @@ namespace ogma {
         private:
             std::shared_ptr<spdlog::logger> logger;
 
-            Config* m_config;
-            IpcModule* m_ipc;
-            std::string m_internal_ip;
+            Config *m_config;
+            IpcModule *m_ipc;
 
             SocketServer m_server;
             ConnectionList m_connections;
@@ -80,25 +77,34 @@ namespace ogma {
             std::mutex m_event_lock;
 
             std::condition_variable m_event_cond;
-            std::map<BackendEvent, std::string> m_event_names;
             std::queue<std::pair<BackendEvent, json>> m_event_queue;
+
+            uint16_t m_action_count = 0;
 
             bool m_shutdown = false;
 
             void on_open(const ws::connection_hdl &handle);
+
             void on_close(const ws::connection_hdl &handle);
+
             void on_message(ws::connection_hdl handle, const SocketServer::message_ptr &msg);
+
             void process_request(const ws::connection_hdl &handle, json action,
                                  std::function<void(const json)> &callback);
-            void add_to_broadcast_queue(BackendEvent event, const json &data);
 
             static const json prepare_response(const json &request, const json &payload, const json &error);
 
         public:
-            WebSocket(Config* config, IpcModule* ipc);
+            WebSocket(Config *config, IpcModule *ipc);
+
             virtual ~WebSocket();
+
             void start();
+
+            void add_to_broadcast_queue(BackendEvent event, const json &data);
+
             void process_broadcast_queue();
+
             const std::vector<std::shared_ptr<ClientDetails>> get_connected_clients();
     };
 

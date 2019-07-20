@@ -9,7 +9,7 @@ set(DB_DIR "${PROJECT_SOURCE_DIR}/sql")
 set(LIB_DIR "${PROJECT_SOURCE_DIR}/libs")
 
 # Copy all DB files
-set(DB_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/db")
+set(DB_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/sql")
 file(MAKE_DIRECTORY ${DB_OUTPUT_DIR})
 file(GLOB db_files "${DB_DIR}/*.sql")
 foreach (file ${db_files})
@@ -26,7 +26,7 @@ set(Spdlog_DIR "${LIB_DIR}/spdlog")
 set(Nfd_DIR "${LIB_DIR}/nativefiledialog")
 
 # Add Boost
-find_package(Boost 1.69 COMPONENTS program_options filesystem REQUIRED)
+find_package(Boost 1.69 COMPONENTS program_options filesystem regex REQUIRED)
 
 # Add GTK3
 find_package(PkgConfig REQUIRED)
@@ -69,6 +69,8 @@ add_executable(
         src/WebSocket.cpp
         src/IpcModule.cpp
         src/Settings.cpp
+        src/Database.cpp
+        src/FileManager.cpp
         src/Library.cpp
         src/Collection.cpp
         ${Lib_SRC}
@@ -78,8 +80,10 @@ target_link_libraries(
         sqlite3
         sqlpp11
         pthread
+        crypto
         boost_program_options
         boost_filesystem
+        boost_regex
         spdlog
         ${GTK3_LIBRARIES}
         "${Nfd_DIR}/build/lib/Release/x64/libnfd.a"
