@@ -25,3 +25,11 @@ CREATE TABLE IF NOT EXISTS entity_tags
     FOREIGN KEY (entityId) REFERENCES entities (id) ON DELETE CASCADE,
     FOREIGN KEY (tagId) REFERENCES tags (id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS sink_tags
+(
+    entityId TEXT,
+    tagId    TEXT,
+    UNIQUE (entityId, tagId),
+    FOREIGN KEY (entityId) REFERENCES entities (id) ON DELETE CASCADE,
+    FOREIGN KEY (tagId) REFERENCES tags (id) ON DELETE CASCADE
+);
