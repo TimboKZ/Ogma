@@ -37,7 +37,7 @@ export enum BackendEvents {
     EnvRemoveEntities = 'env-remove-ent',
     EnvUpdateEntities = 'env-upd-ent',
 
-    EnvAddFiles = 'env-add-files',
+    EnvUpdateFiles = 'env-update-files',
     EnvRemoveFiles = 'env-remove-files',
     EnvUpdateThumbs = 'env-thumb-updates',
 
@@ -157,6 +157,12 @@ export const KeyCode = {
     C: 67,
 };
 
+export enum ThumbnailState {
+    Impossible = 0,
+    Possible = 1,
+    Ready = 2,
+}
+
 // Reexporting parts of backend typedef
 export const EnvProperty = BackendTypedef.EnvProperty;
 
@@ -165,7 +171,6 @@ export const ColorsLight = BackendTypedef.ColorsLight;
 export const ColorsDark = BackendTypedef.ColorsDark;
 
 export const FileErrorStatus = BackendTypedef.FileErrorStatus;
-export const ThumbnailState = BackendTypedef.ThumbnailState;
 
 export const VideoExtensions = BackendTypedef.VideoExtensions;
 export const ImageExtensions = BackendTypedef.ImageExtensions;

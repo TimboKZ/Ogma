@@ -68,12 +68,6 @@ const FileErrorStatus = {
     FileDoesntExist: 0,
     EntityDoesntExist: 1,
 };
-/** @enum {number} ThumbnailState **/
-const ThumbnailState = {
-    Impossible: 0,
-    Possible: 1,
-    Ready: 2,
-};
 const VideoExtensions = ['3g2',
     '3gp',
     '3gpp',
@@ -509,7 +503,6 @@ const data = {
     ColorsLight,
     ColorsDark,
     FileErrorStatus,
-    ThumbnailState,
     VideoExtensions,
     ImageExtensions,
     AudioExtensions,

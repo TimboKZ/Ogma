@@ -55,9 +55,9 @@ export default class DataManager {
             },
             [BackendEvents.RemoveConnection]: Dispatcher.removeConnection,
 
-            [BackendEvents.CreateEnvironment]: summary => {
-                EnvDispatcher.updateSummary(summary.id, summary);
-                this._fetchEnvDetails(summary.id)
+            [BackendEvents.CreateEnvironment]: data => {
+                EnvDispatcher.updateSummary(data.id, data.summary);
+                this._fetchEnvDetails(data.id)
                     .catch(window.handleError);
             },
             [BackendEvents.CloseEnvironment]: Dispatcher.closeEnvironment,
@@ -68,7 +68,7 @@ export default class DataManager {
             [BackendEvents.EnvRemoveEntities]: data => EnvDispatcher.removeEntities(data.id, data.entityIds),
             [BackendEvents.EnvUpdateEntities]: data => EnvDispatcher.updateEntities(data.id, data.entities),
 
-            [BackendEvents.EnvAddFiles]: data => EnvDispatcher.updateFiles(data.id, data.files),
+            [BackendEvents.EnvUpdateFiles]: data => EnvDispatcher.updateFiles(data.id, data.files),
             [BackendEvents.EnvRemoveFiles]: data => EnvDispatcher.removeFiles(data.id, data.hashes),
             [BackendEvents.EnvUpdateThumbs]: data => EnvDispatcher.updateThumbStates(data.id, data.thumbs, data.thumbState),
 
@@ -161,7 +161,7 @@ export default class DataManager {
                 });
         }
         return window.ipcModule.getDirectoryContents({id, path})
-            .then((result: { directory: File, files: File[] }) => {
+            .then((result) => {
                 const {directory, files} = result;
                 EnvDispatcher.updateFiles(id, files.concat([directory]));
                 EnvDispatcher.updateDirectory(id, directory, files.map(f => f.hash));

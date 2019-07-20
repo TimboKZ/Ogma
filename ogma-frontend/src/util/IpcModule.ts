@@ -9,7 +9,7 @@ import Promise from 'bluebird';
 import ReconnectingWebSocket from 'reconnecting-websocket';
 
 import {UserFriendlyError} from './ErrorHandler';
-import {EnvSummary} from '../redux/ReduxTypedef';
+import {Entity, EnvSummary, File, Tag} from '../redux/ReduxTypedef';
 
 type IpcAction = {
     id?: number,
@@ -22,6 +22,7 @@ type IpcEvent = {
     name: string,
     data: any,
 }
+type IpcData = { id: string }
 
 export type ClientDetails = {
     id: string,
@@ -119,26 +120,26 @@ export default class IpcModule {
 
     getClientList(): Promise<ClientDetails[]> { return this.placeholderPromise;}
 
+    getSummaries(): Promise<EnvSummary[]> { return this.placeholderPromise; }
+
+    getAllTags(data: IpcData): Promise<Tag[]> { return this.placeholderPromise || data; }
+
+    getAllEntities(data: IpcData): Promise<Entity[]> { return this.placeholderPromise || data; }
+
     openCollection(): Promise<EnvSummary> { return this.placeholderPromise; }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
-     * @returns {Promise<EnvSummary[]>}
-     */
-    getSummaries() {
-        // noinspection JSValidateTypes
-        return this.envManager.getSummaries();
-    }
+    getDirectoryContents(data: IpcData & { path: string }): Promise<{ directory: File, files: File[] }> { return this.placeholderPromise || data;}
 
-    // noinspection JSUnusedGlobalSymbols
+    scanDirectoryForChanges(data: IpcData & { path: string, cachedHashes: string[], dirReadTime: number }): Promise<File> { return this.placeholderPromise || data;}
+
     /**
      * @param {object} data
      * @param {string} data.id Environment ID
+     * @param {RelPath} data.path Path relative to environment root
+     * @param {string[]} data.cachedHashes Hashes that are assumed to be in this directory
+     * @param {number} data.dirReadTime Time (in seconds) when the directory was initially read
+     * @returns {Promise.<FileDetails>} Directory details
      */
-    // @ts-ignore
-    getAllTags(data) {
-        return this.envManager.getEnvironment({id: data.id}).getAllTags();
-    }
 
     // noinspection JSUnusedGlobalSymbols
     /**
@@ -190,16 +191,6 @@ export default class IpcModule {
     /**
      * @param {object} data
      * @param {string} data.id Environment ID
-     */
-    // @ts-ignore
-    getAllEntities(data) {
-        return this.envManager.getEnvironment(data).getAllEntities();
-    }
-
-    // noinspection JSUnusedGlobalSymbols
-    /**
-     * @param {object} data
-     * @param {string} data.id Environment ID
      * @param {string[]} data.entityIds Entity IDs for each file details will be fetched.
      * @returns {Promise.<(FileDetails||FileErrorStatus)[]>}
      */
@@ -230,31 +221,6 @@ export default class IpcModule {
     // @ts-ignore
     closeEnvironment(data) {
         return this.envManager.closeEnvironment(data);
-    }
-
-    // noinspection JSUnusedGlobalSymbols
-    /**
-     * @param {object} data
-     * @param {string} data.id Environment ID
-     * @param {string} data.path Relative path of the directory (from environment root)
-     */
-    // @ts-ignore
-    getDirectoryContents(data) {
-        return this.envManager.getEnvironment(data).getDirectoryContents(data);
-    }
-
-    // noinspection JSUnusedGlobalSymbols
-    /**
-     * @param {object} data
-     * @param {string} data.id Environment ID
-     * @param {RelPath} data.path Path relative to environment root
-     * @param {string[]} data.cachedHashes Hashes that are assumed to be in this directory
-     * @param {number} data.dirReadTime Time (in seconds) when the directory was initially read
-     * @returns {Promise.<FileDetails>} Directory details
-     */
-    // @ts-ignore
-    scanDirectoryForChanges(data) {
-        return this.envManager.getEnvironment(data).scanDirectoryForChanges(data);
     }
 
     // noinspection JSUnusedGlobalSymbols
