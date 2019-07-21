@@ -208,6 +208,7 @@ time_t util::get_video_duration(fs::path videoFile) {
             string part = line.substr(12, 8);
             vector<string> parts;
             boost::split(parts, part, boost::is_any_of(":"));
+            if (parts.size() != 3) return -1;
             time_t seconds = stoi(parts[2]) + stoi(parts[1]) * 60 + stoi(parts[0]) * 60 * 60;
             return seconds;
         }
