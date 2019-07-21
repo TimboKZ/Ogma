@@ -85,7 +85,7 @@ namespace ogma {
             SocketServer m_server;
             ConnectionList m_connections;
             std::mutex m_connection_lock;
-            ctpl::thread_pool m_thread_pool{3};
+            ctpl::thread_pool m_thread_pool{2};
 
             std::mutex m_event_lock;
             std::condition_variable m_event_cond;

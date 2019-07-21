@@ -65,19 +65,19 @@ void WebSocket::on_close(const ws::connection_hdl &handle) {
 
 void WebSocket::on_message(ws::connection_hdl handle, const SocketServer::message_ptr &msg) {
     vector<string> parts;
-    auto request = json::parse(msg->get_payload());
-
-    auto action_num = ++m_action_count;
+    const auto request = json::parse(msg->get_payload());
+    const auto action_num = ++m_action_count;
     try {
-        bool callback_called = false;
-        function<void(const json)> callback = [&handle, &callback_called, &request, this](const json payload) {
-            callback_called = true;
+        function<void(const json)> callback = [handle, request, this](const json payload) {
             auto response = prepare_response(request, payload, nullptr);
             m_server.send(std::move(handle), response.dump(), ws::frame::opcode::text);
         };
         logger->info(STR("Received action #" << action_num << ": " << request));
         this->process_request(handle, request, callback);
-        if (!callback_called) callback(nullptr);
+//        if (!callback_called) {
+//            logger->error(STR("Callback for action #" << action_num << " was never called!"));
+//            callback(nullptr);
+//        }
     } catch (const std::exception &e) {
         logger->error(STR("Error on action #" << action_num << ": " << e.what()));
         auto response = prepare_response(request, nullptr, e.what());
@@ -99,7 +99,9 @@ void WebSocket::process_request(const ws::connection_hdl &handle, json action, f
         client = client_connection->second;
     }
 
-    m_ipc->process_action(name, payload, client, callback);
+    m_thread_pool.push([this, name, payload, client, callback](int id) {
+        m_ipc->process_action(name, payload, client, callback);
+    });
 }
 
 void WebSocket::add_to_broadcast_queue(BackendEvent event, const json &data) {

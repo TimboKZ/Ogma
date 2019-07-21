@@ -168,6 +168,7 @@ file_ptr Collection::scanDirectoryForChanges(fs::path path, vector<string> cache
 }
 
 void Collection::requestFileThumbnails(vector<string> paths) {
+    // TODO: Parallelise this for loop
     for (auto &path : paths) {
         base_file_ptr baseFile;
         string thumbName;

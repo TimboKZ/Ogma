@@ -165,34 +165,65 @@ std::string util::slugify(std::string str) {
     return str;
 }
 
-auto number_regex = boost::regex("[0-9]+");
+template<typename... Args>
+vector<string> get_command_output(Args &&...args) {
+    process::ipstream is;
+    process::child child(args..., process::std_out > is);
 
-long util::get_frame_count(fs::path videoFile) {
+    vector<string> lines;
+    string line;
+    while (child.running() && getline(is, line) && !line.empty())
+        lines.push_back(line);
+    child.wait();
+    return lines;
+}
+
+template<typename... Args>
+vector<string> get_command_err(Args &&...args) {
+    process::ipstream is;
+    process::child child(args..., process::std_err > is);
+
+    vector<string> lines;
+    string line;
+    while (child.running() && getline(is, line) && !line.empty())
+        lines.push_back(line);
+    child.wait();
+    return lines;
+}
+
+auto duration_regex = boost::regex("^Input(\\s+)");
+
+time_t util::get_video_duration(fs::path videoFile) {
     if (!fs::exists(videoFile)) {
         throw runtime_error(STR("Attempted count frames of non-existent file: " << videoFile));
     }
 
-    auto ffprobe = util::get_ffprobe_path();
-    if (ffprobe.empty()) return -1;
-    string command = ffprobe.string();
-    command += " -v error -select_streams v:0 -show_entries stream=nb_frames -of default=nokey=1:noprint_wrappers=1";
-    command += " " + videoFile.string();
+    auto ffmpeg = util::get_ffmpeg_path();
+    if (ffmpeg.empty()) return -1;
 
-    process::ipstream is;
-    process::child c(command, process::std_out > is);
+    auto lines = get_command_err(ffmpeg, "-i", videoFile);
+    for (auto &line : lines) {
+        boost::smatch match;
+        if (boost::starts_with(line, "  Duration: ")) {
+            string part = line.substr(12, 8);
+            vector<string> parts;
+            boost::split(parts, part, boost::is_any_of(":"));
+            time_t seconds = stoi(parts[2]) + stoi(parts[1]) * 60 + stoi(parts[0]) * 60 * 60;
+            return seconds;
+        }
+    }
 
-    std::vector<std::string> data;
-    std::string line;
-    while (c.running() && std::getline(is, line) && !line.empty())
-        data.push_back(line);
-    c.wait();
+    return -1;
+}
 
-    if (data.size() != 1) return -1;
-    auto output = data[0];
-    algo::trim(output);
-    if (!boost::regex_match(output, number_regex)) return -1;
+std::string util::seconds_to_ffmpeg_duration(time_t durationSeconds) {
+    int hours = durationSeconds / 3600;
+    int minutes = (durationSeconds % 3600) / 60;
+    int seconds = durationSeconds % 60;
 
-    return std::stol(output);
+    stringstream ss;
+    ss << setfill('0') << setw(2) << hours << ':' << setw(2) << minutes << ':' << setw(2) << seconds;
+    return ss.str();
 }
 
 string util::read_file(const fs::path &path) {

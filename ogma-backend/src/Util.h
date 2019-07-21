@@ -91,7 +91,9 @@ namespace ogma {
 
         std::string slugify(std::string str);
 
-        long get_frame_count(fs::path videoFile);
+        time_t get_video_duration(fs::path videoFile);
+
+        std::string seconds_to_ffmpeg_duration(time_t durationSeconds);
 
         std::string read_file(const fs::path &path);
 

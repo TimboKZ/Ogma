@@ -102,33 +102,35 @@ FileManager::getDirectoryDiff(fs::path path, vector<string> cachedHashes, time_t
 }
 
 
-void FileManager::generateFfmpegThumb(fs::path inPath, fs::path outPath) {
-    auto duration = util::get_frame_count(inPath);
-    long frame = duration > 0 ? duration * 0.05 : 10;
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "MemberFunctionCanBeStatic"
 
-    process::child c(util::get_ffmpeg_path(),
-                     "-y",
-                     "-i",
-                     inPath,
-                     "-vf",
-                     STR("select=gte(n\\," << frame << ")"),
-                     "-an",
-                     "-vframes",
-                     "1",
-                     "-q:v",
-                     "10",
-                     "-filter:v",
-                     "scale='300:-1'",
-                     outPath,
-                     process::std_out > process::null,
-                     process::std_err > process::null
-    );
-    c.wait();
-    int result = c.exit_code();
+void FileManager::generateFfmpegThumb(fs::path inPath, fs::path outPath) {
+    auto duration = util::get_video_duration(inPath);
+
+    int result;
+    if (duration > 0) {
+        auto durationString = util::seconds_to_ffmpeg_duration(duration * 0.04);
+        process::child c(util::get_ffmpeg_path(),
+                         "-y", "-ss", durationString, "-i", inPath, "-an", "-vframes", "1", "-q:v", "10",
+                         "-filter:v", "scale='300:-1'", outPath, process::std_err > process::null);
+        c.wait();
+        result = c.exit_code();
+    } else {
+        auto durationString = util::seconds_to_ffmpeg_duration(duration * 0.04);
+        process::child c(util::get_ffmpeg_path(),
+                         "-y", "-i", inPath, "-an", "-vframes", "1", "-q:v", "10",
+                         "-filter:v", "scale='300:-1'", outPath, process::std_err > process::null);
+        c.wait();
+        result = c.exit_code();
+    }
+
     if (result != 0) {
         throw runtime_error(STR("ffmpeg exited with code " << result));
     }
 }
+
+#pragma clang diagnostic pop
 
 string FileManager::generateThumbnail(base_file_ptr baseFile, bool skipCheck) {
     if (!skipCheck) {
@@ -140,7 +142,8 @@ string FileManager::generateThumbnail(base_file_ptr baseFile, bool skipCheck) {
 
     string thumbId = util::get_md5(STR(sourcePath << util::get_unix_timestamp())).substr(0, 10);
     auto thumbName = thumbId + ".jpg";
-    generateFfmpegThumb(baseFile->osPath, m_thumb_dir / thumbName);
+
+    generateFfmpegThumb(sourcePath, m_thumb_dir / thumbName);
 
     auto query = sqlpp::insert_into(t_thumbnails)
             .set(t_thumbnails.id = thumbId,
@@ -163,6 +166,9 @@ string FileManager::checkThumbnail(base_file_ptr baseFile) {
     string name = string(thumb.id) + ".jpg";
     if (thumb.epoch < baseFile->modTime) {
         fs::remove(m_thumb_dir / name);
+        m_db->operator()(sqlpp::remove_from(t_thumbnails).where(t_thumbnails.id == thumb.id));
+        return "";
+    } else if (!fs::exists(m_thumb_dir / name)) {
         m_db->operator()(sqlpp::remove_from(t_thumbnails).where(t_thumbnails.id == thumb.id));
         return "";
     }
