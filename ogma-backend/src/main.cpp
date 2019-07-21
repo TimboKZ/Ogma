@@ -60,7 +60,7 @@ int main(int ac, char *av[]) {
     }
 
     // Prepare config
-    shared_ptr<Config> config(new Config());
+    unique_ptr<Config> config(new Config());
     if (vm.count(param_web_port)) {
         config->web_server_port = vm[param_web_port].as<int>();
     } else {
@@ -108,11 +108,13 @@ int main(int ac, char *av[]) {
     library->setWebSocket(webSocket.get());
     ipcModule->set_web_socket(webSocket.get());
 
-    Server server(config);
+    unique_ptr<Server> server(new Server(config.get(), library.get()));
 
+    thread socket_thread(&WebSocket::start, webSocket.get());
+    thread web_thread(&Server::start, server.get());
     thread broadcast_thread(&WebSocket::process_broadcast_queue, webSocket.get());
-    webSocket->start();
-    server.start();
+    web_thread.join();
+    socket_thread.join();
     broadcast_thread.join();
     return 0;
 }

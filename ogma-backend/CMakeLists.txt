@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.14)
 project(ogma_backend)
 
+option(ENABLE_SHARED "Build shared library" OFF)
+option(ENABLE_STATIC "Build static library" ON)
 set(BUILD_SHARED_LIBS "OFF")
 set(CMAKE_CXX_STANDARD 14)
 
@@ -25,15 +27,15 @@ set(Hashidsxx_DIR "${LIB_DIR}/hashidsxx")
 set(Spdlog_DIR "${LIB_DIR}/spdlog")
 set(Nfd_DIR "${LIB_DIR}/nativefiledialog")
 
-# Add Boost
-find_package(Boost 1.69 COMPONENTS program_options filesystem regex REQUIRED)
-
 # Add GTK3
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 include_directories(${GTK3_INCLUDE_DIRS})
 link_directories(${GTK3_LIBRARY_DIRS})
 add_definitions(${GTK3_CFLAGS_OTHER})
+
+# Add other libraries
+find_package(Boost 1.69 COMPONENTS program_options filesystem regex REQUIRED)
 
 # Setup include deictories
 include_directories(
@@ -54,9 +56,7 @@ add_subdirectory(${Spdlog_DIR})
 
 file(
         GLOB Lib_SRC
-        "${Sqlpp11Sqlite3_DIR}/src/*.h"
         "${Sqlpp11Sqlite3_DIR}/src/*.cpp"
-        "${Sqlpp11Sqlite3_DIR}/src/detail/*.h"
         "${Sqlpp11Sqlite3_DIR}/src/detail/*.cpp"
         "${Hashidsxx_DIR}/*.cpp"
 )

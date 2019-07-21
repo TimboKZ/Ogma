@@ -46,17 +46,19 @@ namespace ogma {
         File(BaseFile baseFile) {
             hash = baseFile.hash;
             path = baseFile.path;
-            collPath = baseFile.collPath;
+            osPath = baseFile.osPath;
+            nixPath = baseFile.nixPath;
             isDir = baseFile.isDir;
             thumbName = baseFile.thumbName;
             thumbState = baseFile.thumbState;
             readTime = baseFile.readTime;
+            modTime = baseFile.modTime;
         }
 
         json to_json() {
             json summary;
             summary["hash"] = hash;
-            summary["nixPath"] = collPath;
+            summary["nixPath"] = nixPath;
             summary["base"] = path.filename().string();
 
             auto extStr = path.extension().string();
@@ -97,7 +99,7 @@ namespace ogma {
             fs::path m_path;
             fs::path m_config_dir;
             fs::path m_data_db_file;
-            fs::path m_thumbs_db_file;
+            fs::path m_thumb_dir;
 
             db::db_ptr m_db;
             std::shared_ptr<Summary> m_summary;
@@ -118,10 +120,16 @@ namespace ogma {
 
             const std::shared_ptr<Summary> &getSummary() const;
 
+            const fs::path &getThumbDir() const;
+
+            void setProperties(json data);
+
             std::pair<file_ptr, std::vector<file_ptr>> getDirectoryContents(fs::path path);
 
             file_ptr
             scanDirectoryForChanges(fs::path path, std::vector<std::string> cachedHashes, std::time_t dirReadTime);
+
+            void requestFileThumbnails(std::vector<std::string> paths);
 
     };
 

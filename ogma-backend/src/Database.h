@@ -2,11 +2,16 @@
 #define OGMA_BACKEND_DATABASE_H
 
 #include <utility>
+#include <sqlpp11/select.h>
+#include <sqlpp11/insert.h>
+#include <sqlpp11/update.h>
+#include <sqlpp11/remove.h>
+#include <sqlpp11/custom_query.h>
 #include <boost/filesystem.hpp>
 #include <sqlpp11/sqlite3/sqlite3.h>
 
 #include "Util.h"
-#include "tables/tables.h"
+#include "tables/tables_collection.h"
 
 namespace ogma {
 
@@ -20,12 +25,15 @@ namespace ogma {
         namespace {
 
             const char *sql_collection_schema_file = "collection-schema.sql";
+            const char *sql_thumbnails_schema_file = "thumbnail-schema.sql";
             std::string sql_collection_schema;
+            std::string sql_thumbnails_schema;
 
         }
 
         enum Sql {
             Collection,
+            Thumbnails,
             None,
         };
 

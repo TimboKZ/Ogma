@@ -1,7 +1,4 @@
 #include <utility>
-#include <sqlpp11/select.h>
-#include <sqlpp11/insert.h>
-#include <sqlpp11/custom_query.h>
 #include <boost/algorithm/string.hpp>
 
 #include "WebSocket.h"
@@ -29,6 +26,9 @@ Collection::Collection(fs::path path, summary_generator getDefaultSummary, bool 
     m_summary->path = m_path;
 
     m_config_dir = m_path / OGMA_COLL_CONFIG_DIR;
+    if (!fs::exists(m_config_dir) && !allowNew) {
+        throw runtime_error("Collection has Ogma config folder and creation is not allowed.");
+    }
     fs::create_directories(m_config_dir);
 
     m_data_db_file = m_config_dir / "data.sqlite3";
@@ -37,7 +37,8 @@ Collection::Collection(fs::path path, summary_generator getDefaultSummary, bool 
     }
 
     prepareDb();
-    m_file_manager = make_shared<FileManager>(m_path, m_config_dir);
+    m_thumb_dir = m_config_dir / "thumbs";
+    m_file_manager = make_shared<FileManager>(m_path, m_config_dir, m_thumb_dir);
 }
 
 void Collection::setWebSocket(WebSocket *web_socket) { m_web_socket = web_socket; }
@@ -66,7 +67,7 @@ string get_property(const db::db_ptr &_db, const char *name, string value) {
         return value;
     }
     return result.front().value;
-};
+}
 
 void Collection::prepareDb() {
     m_db = db::create_db(m_data_db_file);
@@ -108,6 +109,39 @@ file_ptr Collection::consumeBaseFile(base_file_ptr baseFile) {
 
 const shared_ptr<Summary> &Collection::getSummary() const { return m_summary; }
 
+const fs::path &Collection::getThumbDir() const { return m_thumb_dir; }
+
+void Collection::setProperties(json data) {
+    if (data.find(name_field) != data.end()) {
+        string name = data[name_field];
+        if (!name.empty()) {
+            m_db->operator()(sqlpp::update(t_properties)
+                                     .set(t_properties.value = name)
+                                     .where(t_properties.name == name_field));
+            m_summary->name = name;
+        }
+    }
+    if (data.find(icon_field) != data.end()) {
+        string icon = data[icon_field];
+        if (!icon.empty()) {
+            m_db->operator()(sqlpp::update(t_properties)
+                                     .set(t_properties.value = icon)
+                                     .where(t_properties.name == icon_field));
+            m_summary->icon = icon;
+        }
+    }
+    if (data.find(color_field) != data.end()) {
+        string color = data[color_field];
+        if (!color.empty()) {
+            m_db->operator()(sqlpp::update(t_properties)
+                                     .set(t_properties.value = color)
+                                     .where(t_properties.name == color_field));
+            m_summary->color = color;
+        }
+    }
+    dispatchEvent(BackendEvent::EnvUpdateSummary, json{{"summary", m_summary->to_json()}});
+}
+
 std::pair<file_ptr, std::vector<file_ptr>> Collection::getDirectoryContents(fs::path path) {
     assert(path.is_absolute());
     path = path.lexically_normal();
@@ -132,3 +166,29 @@ file_ptr Collection::scanDirectoryForChanges(fs::path path, vector<string> cache
     }
     return consumeBaseFile(m_file_manager->getFileDetails(path));
 }
+
+void Collection::requestFileThumbnails(vector<string> paths) {
+    for (auto &path : paths) {
+        base_file_ptr baseFile;
+        string thumbName;
+        try {
+            baseFile = m_file_manager->getFileDetails(path);
+            thumbName = m_file_manager->generateThumbnail(baseFile, true);
+        } catch (exception &e) {
+            logger->error(STR("Couldn't generate thumbnail for file " << path << ", reason: " << e.what()));
+        }
+        if (!thumbName.empty()) {
+            json data{
+                    {"thumbs",     json::array()},
+                    {"thumbState", ThumbState::Ready},
+            };
+            data["thumbs"].emplace_back(json{
+                    {"hash",      baseFile->hash},
+                    {"thumbName", thumbName},
+            });
+            dispatchEvent(BackendEvent::EnvUpdateThumbs, data);
+        }
+    }
+}
+
+

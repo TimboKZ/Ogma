@@ -8,6 +8,7 @@
 #include <simple_web_server/server_http.hpp>
 
 #include "Config.h"
+#include "Library.h"
 
 namespace ogma {
 
@@ -18,12 +19,15 @@ namespace ogma {
         private:
             std::shared_ptr<spdlog::logger> logger;
 
-            std::shared_ptr<Config> m_config;
+            Config *m_config;
+            Library *m_library;
             HttpServer m_web_server;
 
         public:
-            explicit Server(std::shared_ptr<Config> config);
+            explicit Server(Config *config, Library *library);
+
             virtual ~Server();
+
             void start();
 
     };

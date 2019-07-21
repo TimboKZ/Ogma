@@ -1,12 +1,10 @@
-//
-// Created by euql1n on 7/20/19.
-//
-
 #ifndef OGMA_BACKEND_FILEMANAGER_H
 #define OGMA_BACKEND_FILEMANAGER_H
 
 #include <string>
 #include <boost/filesystem.hpp>
+
+#include "Database.h"
 
 namespace ogma {
 
@@ -21,7 +19,8 @@ namespace ogma {
     struct BaseFile {
         std::string hash;
         fs::path path;
-        std::string collPath;
+        fs::path osPath;
+        std::string nixPath;
 
         bool isDir;
         std::string thumbName;
@@ -39,9 +38,19 @@ namespace ogma {
 
             fs::path m_root_dir;
             fs::path m_config_dir;
+            fs::path m_thumb_dir;
+            fs::path m_thumb_db_file;
+
+            db::db_ptr m_db;
+
+            void prepareThumbDb();
+
+            std::string checkThumbnail(base_file_ptr baseFile);
+
+            void generateFfmpegThumb(fs::path inPath, fs::path outPath);
 
         public:
-            FileManager(const fs::path &root_dir, const fs::path &config_dir);
+            FileManager(const fs::path &root_dir, const fs::path &config_dir, const fs::path &thumb_dir);
 
             static std::string getFileHash(std::string collPath);
 
@@ -51,6 +60,8 @@ namespace ogma {
 
             std::pair<std::vector<base_file_ptr>, std::vector<std::string>>
             getDirectoryDiff(fs::path path, std::vector<std::string> cachedHashes, std::time_t dirReadTime);
+
+            std::string generateThumbnail(base_file_ptr baseFile, bool skipCheck = false);
 
     };
 

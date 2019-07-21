@@ -4,6 +4,7 @@
 
 #include "Util.h"
 #include "WebSocket.h"
+#include "IpcModule.h"
 
 using namespace std;
 using namespace ogma;
@@ -23,17 +24,6 @@ WebSocket::WebSocket(Config *config, IpcModule *ipc)
     m_server.set_message_handler(ws::lib::bind(&WebSocket::on_message, this, ph::_1, ph::_2));
 }
 
-void WebSocket::start() {
-    thread socket_thread([this]() {
-        m_server.listen(m_config->socket_server_port);
-        m_server.start_accept();
-        m_server.run();
-    });
-    socket_thread.join();
-    m_shutdown = true;
-    this_thread::sleep_for(chrono::seconds(1));
-}
-
 uint16_t connectionCount = 0;
 hashidsxx::Hashids hash_id; // NOLINT(cert-err58-cpp)
 
@@ -50,7 +40,7 @@ void WebSocket::on_open(const ws::connection_hdl &handle) {
 
     auto address = connection->get_raw_socket().remote_endpoint().address();
     auto ip = address.to_string();
-    bool localClient = algo::contains(ip, util::get_local_ip());
+    bool localClient = ip == "::1" || algo::contains(ip, util::get_local_ip());
 
     shared_ptr<ClientDetails> clientDetails(new ClientDetails(id, ip, localClient, userAgent));
     {
@@ -80,7 +70,7 @@ void WebSocket::on_message(ws::connection_hdl handle, const SocketServer::messag
     auto action_num = ++m_action_count;
     try {
         bool callback_called = false;
-        function<void(const json)> callback = [&handle, &callback_called, &request, this](const json &payload) {
+        function<void(const json)> callback = [&handle, &callback_called, &request, this](const json payload) {
             callback_called = true;
             auto response = prepare_response(request, payload, nullptr);
             m_server.send(std::move(handle), response.dump(), ws::frame::opcode::text);
@@ -164,6 +154,13 @@ const json WebSocket::prepare_response(const json &request, const json &payload,
     if (!payload.is_null()) response["payload"] = payload;
     if (!error.is_null()) response["error"] = error;
     return response;
+}
+
+void WebSocket::start() {
+    m_server.listen(m_config->socket_server_port);
+    m_server.start_accept();
+    m_server.run();
+    m_shutdown = true;
 }
 
 WebSocket::~WebSocket() {

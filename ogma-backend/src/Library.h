@@ -27,7 +27,7 @@ namespace ogma {
 
             std::mutex m_coll_lock;
             std::map<std::string, std::shared_ptr<Collection>> m_coll_by_id;
-            std::map<fs::path, std::shared_ptr<Collection>> m_coll_by_slug;
+            std::map<std::string, std::shared_ptr<Collection>> m_coll_by_slug;
             std::map<fs::path, std::shared_ptr<Collection>> m_coll_by_path;
 
             Summary getDefaultSummary(const fs::path &path);
@@ -42,6 +42,8 @@ namespace ogma {
             void setWebSocket(WebSocket *web_socket);
 
             std::shared_ptr<Collection> openCollection(const fs::path &path);
+
+            void closeCollection(std::string id);
 
             std::shared_ptr<Collection> getCollection(const std::string &id);
 

@@ -3,6 +3,7 @@
 
 #include <map>
 #include <ctime>
+#include <future>
 #include <sstream>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -24,6 +25,10 @@ namespace ogma {
             fs::path sql_dir;
             fs::path home_dir;
             std::string local_ip;
+
+            fs::path ffmpeg_path;
+            fs::path ffprobe_path;
+
             std::vector<std::string> colors;
             std::vector<std::string> colors_light;
             std::vector<std::string> colors_dark;
@@ -43,6 +48,10 @@ namespace ogma {
         const fs::path &get_home_dir();
 
         const std::string &get_local_ip();
+
+        const fs::path &get_ffmpeg_path();
+
+        const fs::path &get_ffprobe_path();
 
         const std::vector<std::string> &get_colors();
 
@@ -72,7 +81,6 @@ namespace ogma {
                 std::stringstream stream_;
 
                 Formatter(const Formatter &) = delete; // NOLINT(hicpp-use-equals-delete,modernize-use-equals-delete)
-//            Formatter &operator=(Formatter &);
         };
 
         std::shared_ptr<spdlog::logger> create_logger(const std::string &name);
@@ -82,6 +90,8 @@ namespace ogma {
         std::string get_md5(const std::string &stringToHash);
 
         std::string slugify(std::string str);
+
+        long get_frame_count(fs::path videoFile);
 
         std::string read_file(const fs::path &path);
 

@@ -5,9 +5,10 @@
 #ifndef OGMA_BACKEND_SETTINGS_H
 #define OGMA_BACKEND_SETTINGS_H
 
-#include "Util.h"
 #include <nlohmann/json.hpp>
 #include <boost/filesystem.hpp>
+
+#include "Util.h"
 
 namespace ogma {
 

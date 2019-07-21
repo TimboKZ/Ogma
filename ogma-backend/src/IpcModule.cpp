@@ -25,6 +25,7 @@ void IpcModule::process_action(const std::string &name, const json &requestPaylo
     }
 
     json payload;
+    bool callbackCalled = false;
     if (name == "getClientDetails") {
         payload = client->to_json();
 
@@ -61,6 +62,12 @@ void IpcModule::process_action(const std::string &name, const json &requestPaylo
             throw runtime_error(NFD_GetError());
         }
 
+    } else if (name == "closeCollection") {
+        m_library->closeCollection(collId);
+
+    } else if (name == "setCollectionProperties") {
+        m_library->getCollection(collId)->setProperties(requestPayload);
+
     } else if (name == "getDirectoryContents") {
         auto result = m_library->getCollection(collId)->getDirectoryContents(requestPayload["path"]);
         payload["directory"] = result.first.get()->to_json();
@@ -73,9 +80,16 @@ void IpcModule::process_action(const std::string &name, const json &requestPaylo
                                                                              requestPayload["dirReadTime"]);
         payload = dir->to_json();
 
+    } else if (name == "requestFileThumbnails") {
+        callback(nullptr);
+        callbackCalled = true;
+        vector<string> paths = requestPayload["paths"];
+        m_library->getCollection(collId)->requestFileThumbnails(paths);
+
     } else {
         throw runtime_error("Action " + name + " is not supported .");
     }
-    callback(payload);
+
+    if (!callbackCalled) callback(payload);
 }
 

@@ -30,37 +30,65 @@ class FileServer {
         }
 };
 
-Server::Server(shared_ptr<Config> config) : logger(util::create_logger("serv")), m_config(std::move(config)) {
+void serve_file(const shared_ptr<HttpServer::Response> &response,
+                const shared_ptr<HttpServer::Request> &request,
+                fs::path file) {
+    SimpleWeb::CaseInsensitiveMultimap header;
+    header.emplace("Cache-Control", "max-age=86400");
+    auto ifs = make_shared<ifstream>();
+    ifs->open(file.string(), ifstream::in | ios::binary | ios::ate);
+    if (*ifs) {
+        auto length = ifs->tellg();
+        ifs->seekg(0, ios::beg);
+        header.emplace("Content-Length", to_string(length));
+        response->write(header);
+        FileServer::read_and_send(response, ifs);
+    } else {
+        throw invalid_argument("could not read file!");
+    }
+}
+
+Server::Server(Config *config, Library *library)
+        : logger(util::create_logger("serv")), m_config(std::move(config)), m_library(std::move(library)) {
     m_web_server.config.port = m_config->web_server_port;
-    m_web_server.default_resource["GET"] = [this](const shared_ptr<HttpServer::Response>& response,
-                                                  const shared_ptr<HttpServer::Request>& request) {
+    m_web_server.resource["^/static/([0-9A-Za-z]+)/thumbs/([^/]+)$"]["GET"] =
+            [this](const shared_ptr<HttpServer::Response> &response,
+                   const shared_ptr<HttpServer::Request> &request) {
+                try {
+                    auto collId = request->path_match[1].str();
+                    auto thumbName = request->path_match[2].str();
+                    auto collection = m_library->getCollection(collId);
+
+                    auto thumbDir = collection->getThumbDir();
+                    auto path = fs::canonical(thumbDir / thumbName);
+
+                    if (distance(thumbDir.begin(), thumbDir.end()) > distance(path.begin(), path.end()) ||
+                        !equal(thumbDir.begin(), thumbDir.end(), path.begin())) {
+                        throw invalid_argument("thumb must be within thumb dir");
+                    }
+
+                    serve_file(response, request, path);
+                }
+                catch (const exception &e) {
+                    response->write(SimpleWeb::StatusCode::client_error_bad_request,
+                                    "Could not open path " + request->path + ": " + e.what());
+                }
+            };
+
+    m_web_server.default_resource["GET"] = [this](const shared_ptr<HttpServer::Response> &response,
+                                                  const shared_ptr<HttpServer::Request> &request) {
         try {
-            auto web_root_path = m_config->frontend_build_path;
-            auto path = boost::filesystem::canonical(web_root_path / request->path);
-            // Check if path is within web_root_path
-            if (distance(web_root_path.begin(), web_root_path.end()) > distance(path.begin(), path.end()) ||
-                !equal(web_root_path.begin(), web_root_path.end(), path.begin()))
+            auto webRootPath = m_config->frontend_build_path;
+            auto path = fs::canonical(webRootPath / request->path);
+            // Check if path is within webRootPath
+            if (distance(webRootPath.begin(), webRootPath.end()) > distance(path.begin(), path.end()) ||
+                !equal(webRootPath.begin(), webRootPath.end(), path.begin())) {
                 throw invalid_argument("path must be within root path");
+            }
             if (boost::filesystem::is_directory(path)) path /= "index.html";
 
-            logger->info(STR("Serving file: " << path));
-
-            SimpleWeb::CaseInsensitiveMultimap header;
-            header.emplace("Cache-Control", "max-age=86400");
-            auto ifs = make_shared<ifstream>();
-            ifs->open(path.string(), ifstream::in | ios::binary | ios::ate);
-
-            if (*ifs) {
-                auto length = ifs->tellg();
-                ifs->seekg(0, ios::beg);
-
-                header.emplace("Content-Length", to_string(length));
-                response->write(header);
-
-                // Trick to define a recursive function within this scope (for example purposes)
-                FileServer::read_and_send(response, ifs);
-            } else
-                throw invalid_argument("Could not read file: " + request->path);
+            logger->debug(STR("Serving static file: " << request->path));
+            serve_file(response, request, path);
         }
         catch (const exception &e) {
             response->write(SimpleWeb::StatusCode::client_error_bad_request,
@@ -70,11 +98,7 @@ Server::Server(shared_ptr<Config> config) : logger(util::create_logger("serv")),
 
 }
 
-void Server::start() {
-    thread web_thread([this]() { m_web_server.start(); });
-    web_thread.join();
-    this_thread::sleep_for(chrono::seconds(1));
-}
+void Server::start() { m_web_server.start(); }
 
 Server::~Server() {
     m_web_server.stop();

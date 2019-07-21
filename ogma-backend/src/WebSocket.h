@@ -2,6 +2,7 @@
 #define OGMA_BACKEND_WEBSOCKET_H
 
 #include <map>
+#include <ctpl.h>
 #include <utility>
 #include <stdbool.h>
 #include <nlohmann/json.hpp>
@@ -11,21 +12,27 @@
 #include "Config.h"
 #include "Settings.h"
 #include "Library.h"
-#include "IpcModule.h"
 
 namespace ogma {
     namespace ws = websocketpp;
     using json = nlohmann::json;
     using SocketServer = ws::server<ws::config::asio>;
 
+    // Forward declaration
+    class IpcModule;
+
     // Important: Also add string version to below
     enum BackendEvent : unsigned int {
         AddConnection,
         RemoveConnection,
-        CreateEnvironment,
+
+        CreateCollection,
+        CloseCollection,
+        EnvUpdateSummary,
 
         EnvUpdateFiles,
         EnvRemoveFiles,
+        EnvUpdateThumbs,
     };
 
     namespace {
@@ -35,10 +42,14 @@ namespace ogma {
             // Important: Also add enum version above
             event_names[BackendEvent::AddConnection] = "add-conn";
             event_names[BackendEvent::RemoveConnection] = "remove-conn";
-            event_names[BackendEvent::CreateEnvironment] = "create-env";
+
+            event_names[BackendEvent::CreateCollection] = "create-collection";
+            event_names[BackendEvent::CloseCollection] = "close-collection";
+            event_names[BackendEvent::EnvUpdateSummary] = "env-update-summary";
 
             event_names[BackendEvent::EnvUpdateFiles] = "env-update-files";
             event_names[BackendEvent::EnvRemoveFiles] = "env-remove-files";
+            event_names[BackendEvent::EnvUpdateThumbs] = "env-update-thumbs";
         }
     }
 
@@ -74,14 +85,14 @@ namespace ogma {
             SocketServer m_server;
             ConnectionList m_connections;
             std::mutex m_connection_lock;
-            std::mutex m_event_lock;
+            ctpl::thread_pool m_thread_pool{3};
 
+            std::mutex m_event_lock;
             std::condition_variable m_event_cond;
             std::queue<std::pair<BackendEvent, json>> m_event_queue;
 
-            uint16_t m_action_count = 0;
-
             bool m_shutdown = false;
+            uint16_t m_action_count = 0;
 
             void on_open(const ws::connection_hdl &handle);
 

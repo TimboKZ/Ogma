@@ -28,6 +28,11 @@ const string &db::get_schema(db::Sql schema) {
                 sql_collection_schema = util::read_file(util::get_sql_dir() / sql_collection_schema_file);
             }
             return sql_collection_schema;
+        case Sql::Thumbnails:
+            if (sql_thumbnails_schema.empty()) {
+                sql_thumbnails_schema = util::read_file(util::get_sql_dir() / sql_thumbnails_schema_file);
+            }
+            return sql_thumbnails_schema;
         case None:
         default:
             throw runtime_error(STR("Invalid SQL schema requested: " << schema));

@@ -38,10 +38,6 @@ ogma::Settings::Settings(fs::path ogma_dir)
     }
 
     logger->info(STR("Effective settings: " << m_settings_json));
-
-    for (auto &element : m_settings_json[collections_param]) {
-        m_open_collections.push_back(fs::canonical(element));
-    }
 }
 
 void Settings::persist() {

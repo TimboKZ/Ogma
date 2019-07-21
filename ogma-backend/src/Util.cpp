@@ -5,6 +5,7 @@
 #include <boost/dll.hpp>
 #include <boost/asio.hpp>
 #include <boost/regex.hpp>
+#include <boost/process.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include "Util.h"
@@ -14,6 +15,7 @@ using namespace ogma;
 namespace dll = boost::dll;
 namespace asio = boost::asio;
 namespace algo = boost::algorithm;
+namespace process = boost::process;
 
 void util::set_debug(bool debug_state) { debug = debug_state; }
 
@@ -42,6 +44,14 @@ void util::init_util() {
     } catch (exception &e) {
         logger->warn(STR("Could not determine server IP, using empty string. Error: " << e.what()));
     }
+
+    ffmpeg_path = process::search_path("ffmpeg");
+    if (ffmpeg_path.empty()) logger->warn("Could not find ffmpeg executable, thumbnail generation might not work.");
+    else logger->debug(STR("Detected ffmpeg: " << ffmpeg_path));
+
+    ffprobe_path = process::search_path("ffprobe");
+    if (ffprobe_path.empty()) logger->warn("Could not find ffprobe executable, thumbnail generation might not work.");
+    else logger->debug(STR("Detected ffprobe: " << ffprobe_path));
 
     colors = {
             "#b71c1c", "#d32f2f", "#f44336", "#880e4f", "#c2185b", "#e91e63", "#4a148c", "#7b1fa2",
@@ -83,6 +93,10 @@ const fs::path &util::get_sql_dir() { return sql_dir; };
 const fs::path &util::get_home_dir() { return home_dir; }
 
 const std::string &util::get_local_ip() { return local_ip; }
+
+const fs::path &util::get_ffmpeg_path() { return ffmpeg_path; }
+
+const fs::path &util::get_ffprobe_path() { return ffprobe_path; }
 
 const std::vector<std::string> &util::get_colors() { return colors; }
 
@@ -149,6 +163,36 @@ std::string util::slugify(std::string str) {
     str = boost::regex_replace(str, slug_remove_regex, "");
     algo::to_lower(str);
     return str;
+}
+
+auto number_regex = boost::regex("[0-9]+");
+
+long util::get_frame_count(fs::path videoFile) {
+    if (!fs::exists(videoFile)) {
+        throw runtime_error(STR("Attempted count frames of non-existent file: " << videoFile));
+    }
+
+    auto ffprobe = util::get_ffprobe_path();
+    if (ffprobe.empty()) return -1;
+    string command = ffprobe.string();
+    command += " -v error -select_streams v:0 -show_entries stream=nb_frames -of default=nokey=1:noprint_wrappers=1";
+    command += " " + videoFile.string();
+
+    process::ipstream is;
+    process::child c(command, process::std_out > is);
+
+    std::vector<std::string> data;
+    std::string line;
+    while (c.running() && std::getline(is, line) && !line.empty())
+        data.push_back(line);
+    c.wait();
+
+    if (data.size() != 1) return -1;
+    auto output = data[0];
+    algo::trim(output);
+    if (!boost::regex_match(output, number_regex)) return -1;
+
+    return std::stol(output);
 }
 
 string util::read_file(const fs::path &path) {
