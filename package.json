@@ -59,7 +59,7 @@
     "fs-thumbnail": "^1.0.5",
     "jsondiffpatch": "^0.3.11",
     "lodash": "^4.17.11",
-    "sequelize": "^5.9.2",
+    "sequelize": "^5.15.1",
     "sharp": "^0.22.1",
     "shortid": "^2.2.14",
     "socket.io": "^2.2.0",
