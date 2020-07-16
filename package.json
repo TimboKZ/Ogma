@@ -58,7 +58,7 @@
     "fs-extra": "^8.0.1",
     "fs-thumbnail": "^1.0.5",
     "jsondiffpatch": "^0.3.11",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.19",
     "sequelize": "^5.9.2",
     "sharp": "^0.22.1",
     "shortid": "^2.2.14",
