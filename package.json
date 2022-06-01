@@ -60,7 +60,7 @@
     "jsondiffpatch": "^0.3.11",
     "lodash": "^4.17.11",
     "sequelize": "^5.9.2",
-    "sharp": "^0.22.1",
+    "sharp": "^0.30.5",
     "shortid": "^2.2.14",
     "socket.io": "^2.2.0",
     "trash": "^6.0.0",
