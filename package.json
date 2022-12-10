@@ -54,7 +54,7 @@
     "electron-window-state": "^5.0.3",
     "eventemitter2": "^5.0.1",
     "exact-trie": "^1.0.5",
-    "express": "^4.17.0",
+    "express": "^4.17.3",
     "fs-extra": "^8.0.1",
     "fs-thumbnail": "^1.0.5",
     "jsondiffpatch": "^0.3.11",
